@@ -1,0 +1,16 @@
+{
+  "targets": [
+    {"id": "bridge", "label": "bridge 拼写"},
+    {"id": "river", "label": "river 词义"},
+    {"id": "length", "label": "长方形周长概念"},
+    {"id": "new", "label": "未练习的词"}
+  ],
+  "attempts": [
+    {"target_id": "bridge", "session_index": 1, "outcome": "correct_with_cue"},
+    {"target_id": "bridge", "session_index": 1, "outcome": "correct_unassisted"},
+    {"target_id": "river", "session_index": 1, "outcome": "correct_unassisted"},
+    {"target_id": "river", "session_index": 2, "outcome": "correct_unassisted"},
+    {"target_id": "length", "session_index": 1, "outcome": "incorrect"},
+    {"target_id": "length", "session_index": 1, "outcome": "correct_unassisted"}
+  ]
+}
