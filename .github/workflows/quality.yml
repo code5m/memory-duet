@@ -46,7 +46,7 @@ jobs:
           python-version: '3.11'
       - name: Install browser harness
         run: |
-          npm install --no-save --no-audit --no-fund playwright@1.55.0
+          npm install --no-save --no-audit --no-fund playwright@1.61.0
           npx playwright install --with-deps chromium
       - name: Start local app
         run: |
