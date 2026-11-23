@@ -1,0 +1,22 @@
+{
+  "content_type": "concept",
+  "primary_id": "U04",
+  "goal": "transfer",
+  "targets": [
+    {
+      "id": "perimeter",
+      "answer": "长方形周长等于四条边的长度之和"
+    }
+  ],
+  "assessment": [
+    {
+      "id": "q-transfer",
+      "prompt": "给定长8厘米、宽3厘米的长方形，算周长并解释求法；再换为长6厘米、宽4厘米，解释方法是否变化。",
+      "mode": "transfer",
+      "answer_ids": [
+        "perimeter"
+      ],
+      "exposes_answer": false
+    }
+  ]
+}
