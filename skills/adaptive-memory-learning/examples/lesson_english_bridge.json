@@ -1,0 +1,31 @@
+{
+  "content_type": "language",
+  "primary_id": "S03",
+  "support_id": "V01",
+  "targets": [
+    {
+      "id": "word1",
+      "answer": "bridge"
+    }
+  ],
+  "cue_mappings": [
+    {
+      "target_id": "word1",
+      "cue": "一座连接河两岸的桥的真实照片",
+      "decode_rule": "看图说出英文，再听音拼写",
+      "decoded_answer": "bridge"
+    }
+  ],
+  "assessment": [
+    {
+      "id": "spell1",
+      "prompt": "听教师读词，不看单词文字，写出这个英文名词。",
+      "answer_ids": [
+        "word1"
+      ],
+      "exposes_answer": false,
+      "mode": "spelling"
+    }
+  ],
+  "language_focus": "spelling"
+}
