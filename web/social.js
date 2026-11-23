@@ -403,7 +403,7 @@
     }
   }
   async function imageToData(file){
-    if(!file)return "";
+    if(!file || (!file.name && file.size===0))return "";
     if(file.size>500000||!["image/png","image/jpeg","image/webp"].includes(file.type))throw Error("图片必须是 500KB 以内的 PNG、JPEG 或 WebP");
     return await new Promise((resolve,reject)=>{
       const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(Error("读取照片失败"));r.readAsDataURL(file);
