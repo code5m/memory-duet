@@ -1,0 +1,1 @@
+<view class="container"><view class="label">MY MEMORY SPACE</view><view class="title">我的学习记录</view><view class="card"><view class="title">{{count}} 次练习</view><view class="sub">{{correct}} 次独立正确</view></view><view class="card"><view class="title">记忆宫殿 · 规划中</view><view class="sub">小程序本机数据暂不与网页同步，不能当作跨设备学习统计。</view></view></view>

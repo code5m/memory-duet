@@ -1,0 +1,9 @@
+{
+  "name": "Memory Duet 记忆搭子",
+  "short_name": "记忆搭子",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f8f7f4",
+  "theme_color": "#6754dc",
+  "lang": "zh-CN"
+}

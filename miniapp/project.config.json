@@ -1,0 +1,11 @@
+{
+  "description": "Memory Duet 小程序适配原型",
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "postcss": true
+  },
+  "compileType": "miniprogram",
+  "appid": "touristappid",
+  "projectname": "memory-duet-miniapp"
+}

@@ -1,0 +1,1 @@
+const C=require('../../data/catalog.js');Page({data:{topics:C.TOPICS,dimensions:C.DIMENSIONS.length},open(e){wx.switchTab({url:'/pages/catalog/index'})}});

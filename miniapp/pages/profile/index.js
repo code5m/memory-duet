@@ -1,0 +1,1 @@
+Page({data:{count:0,correct:0},onShow(){const all=wx.getStorageSync('duetMiniAttempts')||{};const rows=Object.values(all).flat();this.setData({count:rows.length,correct:rows.filter(x=>x.outcome==='independent-correct').length})}});

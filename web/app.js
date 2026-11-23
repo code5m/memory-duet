@@ -1,0 +1,430 @@
+(function () {
+  'use strict';
+  var C=window.MemoryDuetCatalog;
+  if (!C) { document.getElementById('app').textContent='学习内容加载失败，请刷新页面。';return; }
+  var APP=document.getElementById('app'), RAIL=document.getElementById('rail'), SEARCH=document.getElementById('globalSearch');
+  var STORAGE='memoryDuetV2', state=load(), ui={
+    view:'home',dimension:'subject',value:'全部',search:'',onlySaved:false,sort:'curated',
+    topicId:null,lessonId:null,phase:'study',hintUsed:false,result:null,bottleId:null,composeBottle:false
+  };
+  var seedMap=['en-lend','en-lend','en-lend','mem-zero','cn-moon1'];
+  migrateLegacy();
+  var startHash=decodeURIComponent(location.hash.slice(1));
+  if (['home','catalog','topics','review','create','community','profile'].includes(startHash)) ui.view=startHash;
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function attr(s){return esc(s);}
+  function initial(){return {saved:{},attempts:{},custom:[],bottles:[],notes:{},likes:{}};}
+  function load(){try{var s=JSON.parse(localStorage.getItem(STORAGE));if(s && typeof s==='object')return Object.assign(initial(),s);}catch(e){}return initial();}
+  function persist(){try{localStorage.setItem(STORAGE,JSON.stringify(state));return true;}catch(e){toast('本机存储空间不足；新内容可能无法在刷新后保留。');return false;}}
+  function migrateLegacy(){
+    if(state.legacyMigrated)return;
+    try{
+      var old=JSON.parse(localStorage.getItem('duetV1')||'null');
+      if(old){
+        Object.keys(old.saved||{}).forEach(function(k){if(old.saved[k]){var id=Number(k)<5?seedMap[Number(k)]:'legacy-'+(Number(k)-5);state.saved[id]=true;}});
+        (old.cards||[]).forEach(function(c,k){
+          if(!Array.isArray(c)||c.length<7)return;
+          state.custom.push(makeCustom({id:'legacy-'+k,subject:String(c[0]||'其他学习').split(' · ')[0],title:c[1],method:c[2],cue:c[4],question:c[5],answer:c[6],photo:c[7]||''}));
+        });
+        (old.bottles||[]).forEach(function(b){if(b && typeof b.task==='string' && /^data:image\/(png|jpeg|webp);base64,/i.test(b.photo||''))state.bottles.push(b);});
+        Object.keys(old.runs||{}).forEach(function(k){var id=seedMap[Number(k)];if(id && !state.attempts[id])state.attempts[id]=[];/* Old attempts had no timestamp or hint status: not upgraded to proven independent practice. */});
+      }
+    }catch(e){}
+    state.legacyMigrated=true;persist();
+  }
+  function toast(msg){var n=document.getElementById('toast');n.textContent=msg;n.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(function(){n.hidden=true;},3600);}
+  function allLessons(){return C.LESSONS.concat(state.custom||[]);}
+  function one(id){return allLessons().find(function(x){return x.id===id;});}
+  function makeCustom(x){
+    var fields=['id','title','subject','method','cue','question','answer','photo'];
+    fields.forEach(function(k){if(x[k]==null)x[k]='';});
+    return Object.assign({
+      topicId:'user-works',topic:'我的原创学习卡',icon:'✎',tone:'peach',tags:['我的作品'],
+      goal:'独立回忆',skill:'知识回忆',difficulty:'自定义',minutes:3,
+      duration:'3 分钟内',format:'互动学习卡',material:'原创文本',language:'中文',
+      exam:'自主学习',scenario:'自主学习',theme:'个人知识',knowledge:'自定义知识',
+      cognitive:'准确回忆',recall:'文字填空',order:'按题目要求',
+      visual:'自主描述',sensory:'视觉 / 文字',group:'独立学习',frequency:'自主安排',
+      source:'用户原创',creator:'我的作品',path:'我的学习',auxMethod:'不需要',grade:'通用'
+    },x);
+  }
+  function status(id){return C.progressState(id,state.attempts);}
+  function statistics(){
+    var histories=Object.values(state.attempts).filter(Array.isArray);
+    var attempts=histories.reduce(function(n,a){return n+a.length;},0);
+    var independent=histories.reduce(function(n,a){return n+a.filter(function(x){return x.outcome==='independent-correct';}).length;},0);
+    var due=allLessons().filter(function(x){return ['待复习','需巩固'].includes(status(x.id));}).length;
+    return {attempts:attempts,independent:independent,due:due};
+  }
+  function setView(view,options){
+    ui.view=view;options=options||{};
+    if(options.topicId)ui.topicId=options.topicId;
+    if(options.lessonId){ui.lessonId=options.lessonId;ui.phase='study';ui.result=null;ui.hintUsed=false;}
+    if(options.dimension){ui.dimension=options.dimension;ui.value=options.value||'全部';}
+    if(options.value && !options.dimension)ui.value=options.value;
+    if(view!=='catalog' && SEARCH.value){/* Keep user search available until explicitly cleared. */}
+    history.replaceState(null,'','#'+view);
+    render();
+    window.scrollTo({top:0,behavior:'instant'});
+  }
+  function button(label,action,more,cls){return '<button type="button" class="'+(cls||'btn-secondary')+'" data-action="'+esc(action)+'" '+(more||'')+'>'+label+'</button>';}
+  function lessonCard(x){
+    return '<article class="lesson-card"><div class="lesson-card-top"><span class="lesson-glyph tone-'+esc(x.tone||'violet')+'">'+esc(x.icon)+'</span><span class="small-pill">'+esc(x.subject)+'</span></div>'+
+      '<h3>'+esc(x.title)+'</h3><p>'+esc(x.cue)+'</p><div class="lesson-bottom"><span class="pill-info">'+esc(x.method)+'</span><span class="pill-info">· '+esc(x.minutes||3)+' 分钟</span>'+
+      '<button class="round-arrow" aria-label="学习 '+attr(x.title)+'" data-action="open-lesson" data-id="'+attr(x.id)+'">↗</button></div></article>';
+  }
+  function topicCard(t){
+    return '<button class="topic-card" type="button" data-action="open-topic" data-id="'+attr(t.id)+'">'+
+      '<div class="topic-art tone-'+esc(t.tone)+'"><span>'+esc(t.icon)+'</span></div>'+
+      '<div class="topic-body"><strong>'+esc(t.title)+'</strong><p>'+esc(t.subtitle)+'</p>'+
+      '<div class="topic-card-footer"><span>'+esc(t.subject)+'</span><span>'+C.topicLessonCount(t.id)+' 张记忆卡 ↗</span></div></div></button>';
+  }
+  function section(title,sub,action){
+    return '<div class="section-top"><div><span class="eyebrow">'+esc(sub)+'</span><h2>'+esc(title)+'</h2></div>'+
+      (action?'<button class="text-link" data-nav="'+esc(action)+'">查看全部 ↗</button>':'')+'</div>';
+  }
+  function home(){
+    var stat=statistics(), topics=C.TOPICS.slice(0,6), lessons=C.LESSONS.slice(0,4);
+    return '<section class="hero"><div class="hero-copy"><span class="eyebrow">WELCOME TO MEMORY DUET / 2026</span>'+
+      '<h1>每个知识点，<br>都有<em>好记的办法。</em></h1><p>把知识变成画面、故事和自己的理解。先学会，再遮住线索，看看你是否真正记住。</p>'+
+      '<div class="hero-actions">'+button('开始探索 ↗','goto-catalog','','btn-primary')+
+      button('看看专题','goto-topics','','btn-secondary')+'</div></div>'+
+      '<div class="hero-graphic" aria-hidden="true"><div class="floating-card one"><b>m</b><small>MEMORIES</small></div><div class="floating-card two">✺</div><div class="floating-card three">✦</div></div></section>'+
+      '<div class="stats-strip"><div class="stat"><strong>'+C.TOPICS.length+'</strong><small>精选学习专题</small></div>'+
+      '<div class="stat"><strong>'+C.DIMENSIONS.length+'</strong><small>可切换分类维度</small></div>'+
+      '<div class="stat"><strong>'+C.LESSONS.length+'</strong><small>原创示例学习卡</small></div></div>'+
+      section('按兴趣开启一段学习','CURATED COLLECTIONS','topics')+
+      '<div class="topic-grid">'+topics.map(topicCard).join('')+'</div>'+
+      section('你可以从这里开始','START SMALL, REMEMBER MORE','catalog')+
+      '<div class="lesson-grid">'+lessons.map(lessonCard).join('')+'</div>'+
+      '<div class="prose-card" style="margin-top:26px"><b>学习建议</b><p>先理解知识，再选择一个主记忆方法。独立答题前不要看答案；提示后答对和独立答对会分开记录。</p>'+
+      '<p class="quiet">当前已记录 '+stat.attempts+' 次本机答题。数据仅保存在本浏览器，暂未接入账号同步。</p></div>';
+  }
+  function head(label,title,description){
+    return '<section class="page-head"><span class="eyebrow">'+esc(label)+'</span><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p></section>';
+  }
+  function catalog(){
+    var dim=C.DIMENSIONS.find(function(x){return x.key===ui.dimension;})||C.DIMENSIONS[0];
+    var values=C.facetOptions(allLessons(),dim.key,{attempts:state.attempts,saved:state.saved});
+    var q=ui.search;
+    return head('LEARN YOUR WAY','自由切换 30 种学习视角','同一张学习卡可以按学科、目标、方法、难度、学习阶段、复习状态等维度重新排列。先选维度，再选内容，不需要重复建分类。')+
+      '<section class="filter-card"><div class="filter-top"><label class="filter-field"><span class="field-label">分类维度 · '+C.DIMENSIONS.length+' 种</span><select class="form-control" id="dimensionSelect" aria-label="切换分类维度">'+
+      C.DIMENSIONS.map(function(x){return '<option value="'+attr(x.key)+'" '+(x.key===dim.key?'selected':'')+'>'+esc(x.label)+'</option>';}).join('')+'</select></label>'+
+      '<label class="filter-field"><span class="field-label">当前分类值</span><select class="form-control" id="valueSelect" aria-label="筛选分类值"><option value="全部">全部</option>'+
+      values.map(function(x){return '<option value="'+attr(x)+'" '+(ui.value===x?'selected':'')+'>'+esc(x)+'</option>';}).join('')+'</select></label>'+
+      '<label class="filter-field"><span class="field-label">排序方式</span><select class="form-control" id="sortSelect"><option value="curated">精选顺序</option><option value="title" '+(ui.sort==='title'?'selected':'')+'>标题排序</option><option value="short" '+(ui.sort==='short'?'selected':'')+'>按学习时长</option></select></label></div>'+
+      '<div class="filter-chips" role="group" aria-label="'+esc(dim.label)+'的分类值">'+['全部'].concat(values.slice(0,11)).concat(ui.value!=='全部' && !values.slice(0,11).includes(ui.value)?[ui.value]:[]).map(function(v){
+        return '<button class="chip '+(ui.value===v?'active':'')+'" type="button" data-action="filter-value" data-value="'+attr(v)+'">'+esc(v)+'</button>';}).join('')+'</div>'+
+      '<div class="filter-bottom"><p>支持多视角浏览，筛选不会修改或复制学习内容。</p>'+
+      '<button class="filter-switch '+(ui.onlySaved?'active':'')+'" type="button" data-action="only-saved">'+(ui.onlySaved?'♥ 只看收藏中':'♡ 只看我的收藏')+'</button></div></section>'+
+      '<div id="catalogResults">'+catalogResults()+'</div>';
+  }
+  function catalogResults(){
+    var filtered=C.filterLessons(allLessons(),{dimension:ui.dimension,value:ui.value,search:ui.search,onlySaved:ui.onlySaved,sort:ui.sort},
+      {saved:state.saved,attempts:state.attempts});
+    return '<div class="section-top" style="margin-top:0"><div><span class="eyebrow">EXPLORE KNOWLEDGE</span><h2>找到适合自己的记法</h2></div><span class="quiet">共 '+filtered.length+' 张学习卡</span></div>'+
+      (filtered.length?'<div class="lesson-grid">'+filtered.map(lessonCard).join('')+'</div>':
+        '<div class="empty-state"><span class="empty-icon">⌕</span><h3>暂时没有符合条件的学习卡</h3><p>换个分类值、关键词，或者发布自己的第一张作品。</p>'+button('清除筛选','clear-filter','','btn-primary')+'</div>');
+  }
+  function topics(){
+    var groups={};
+    C.TOPICS.forEach(function(t){(groups[t.subject]||=[]).push(t);});
+    return head('THE TOPIC LIBRARY','专题图书馆','精选 22 个可直接试学的专题，从英语、语文、数学到科学、编程、工作与生活。每个专题都提供理解线索和独立回忆题。')+
+      Object.keys(groups).map(function(subject){return section(subject,subject.toUpperCase())+
+        '<div class="topic-grid">'+groups[subject].map(topicCard).join('')+'</div>';}).join('');
+  }
+  function topic(){
+    var t=C.topicsById[ui.topicId];if(!t)return topics();
+    var lessons=allLessons().filter(function(x){return x.topicId===t.id;});
+    return '<button class="text-link" data-nav="topics">← 返回全部专题</button>'+
+      '<section class="detail-hero tone-'+esc(t.tone)+'"><div><span class="detail-eyebrow">'+esc(t.subject)+' / LEARNING COLLECTION</span>'+
+      '<h1>'+esc(t.title)+'</h1><p>'+esc(t.subtitle)+'。每张卡先看解释，再遮住线索回忆。</p>'+
+      '<div class="detail-actions">'+button('开始专题学习 ↗','open-lesson','data-id="'+attr(lessons[0].id)+'"','btn-primary')+
+      button('切换分类视角','topic-to-filter','data-value="'+attr(t.title)+'"')+'</div></div><div class="detail-illustration">'+esc(t.icon)+'</div></section>'+
+      section('专题中的知识卡','LEARNING CARDS')+'<div class="lesson-grid">'+lessons.map(lessonCard).join('')+'</div>';
+  }
+  function lesson(){
+    var x=one(ui.lessonId);if(!x)return catalog();
+    var saved=!!state.saved[x.id], history=state.attempts[x.id]||[];
+    var inner;
+    if(ui.phase==='quiz'){
+      inner='<span class="step-mark">STEP 02 / WITHOUT THE CUE</span><h2>遮住线索，独立回忆</h2>'+
+        '<div class="quiz-question">'+esc(x.question)+'</div>'+
+        '<form id="quizForm"><label class="quiz-field"><span class="field-label">写出你的答案（不需要完全依赖提示）</span>'+
+        '<input class="form-control" id="answerInput" name="answer" required autocomplete="off" maxlength="400" placeholder="在这里输入…" aria-label="你的回忆答案"></label>'+
+        (ui.hintUsed?'<div class="hint-box"><strong>已查看提示 · 本次不会计为独立正确</strong><p>'+esc(x.cue)+'</p></div>':'')+
+        '<footer>'+button(ui.hintUsed?'已看提示':'查看提示','reveal-hint',ui.hintUsed?'disabled':'')+
+        '<button class="btn-primary" type="submit">核对我的回答 ↗</button></footer></form>';
+    }else if(ui.phase==='result'){
+      var r=ui.result||{outcome:'revealed',answer:''};
+      var messages={'independent-correct':['独立答对了！','本次记录为独立正确。下一轮复习需要在之后单独完成。'],
+        'prompted-correct':['提示后答对','这次提示对你有帮助，但不计作独立正确。'],
+        'incorrect':['这次还没完全记住','可以重看线索，下次尝试无提示回答。'],
+        'revealed':['参考答案','查看答案不算完成独立练习。']};
+      var message=messages[r.outcome]||messages.revealed;
+      inner='<span class="step-mark">STEP 03 / FEEDBACK</span><h2>'+message[0]+'</h2>'+
+        '<p class="muted">'+message[1]+'</p><div class="answer-box"><small>参考答案</small><div class="answer-text">'+esc(x.answer)+'</div>'+
+        '<p>'+esc(x.explanation)+'</p></div>'+
+        (r.outcome!=='revealed'?'<p class="form-note">你的回答：'+esc(r.answer)+'</p>':'')+
+        '<footer>'+button('再试一次','retry-quiz')+button('继续学习 ↗','next-lesson','','btn-primary')+'</footer>';
+    }else{
+      inner='<span class="step-mark">STEP 01 / UNDERSTAND FIRST</span><h2>先理解，再记忆</h2>'+
+        '<div class="cue-stage tone-'+esc(x.tone||'violet')+'"><div class="cue-icon">'+esc(x.icon)+'</div><p>'+esc(x.cue)+'</p></div>'+
+        '<p class="form-note">建议主方法：<b>'+esc(x.method)+'</b>。本卡不预设额外记忆法；内容正确性始终比画面花哨更重要。</p>'+
+        (x.photo && safePhoto(x.photo)?'<img alt="学习卡配图" src="'+attr(x.photo)+'" style="width:100%;max-height:280px;object-fit:contain;margin-top:16px;border-radius:15px">':'')+
+        '<footer>'+button('生成专用配图提示词','make-prompt')+
+        button('遮住线索，开始试记 ↗','start-quiz','','btn-primary')+'</footer>'+
+        '<div id="promptArea"></div>';
+    }
+    return '<button class="text-link" data-action="back-to-topic">← 返回专题 / 分类学习</button>'+
+      '<div class="page-header-row page-head"><div><span class="eyebrow">'+esc(x.subject)+' / '+esc(x.topic)+'</span><h1>'+esc(x.title)+'</h1>'+
+      '<div class="lesson-meta"><span class="detail-pill">'+esc(x.method)+'</span><span class="detail-pill">约 '+esc(x.minutes)+' 分钟</span>'+
+      '<span class="detail-pill">'+esc(status(x.id))+'</span></div></div>'+
+      '<button type="button" class="btn-secondary" data-action="toggle-saved" data-id="'+attr(x.id)+'">'+(saved?'♥ 已收藏':'♡ 收藏')+'</button></div>'+
+      '<section class="lesson-stage">'+inner+'</section>'+
+      '<section class="prose-card" style="margin-top:17px"><b>学习作品说明</b><p>目标：'+esc(x.goal)+' · 独立回忆方式：'+esc(x.recall)+'。</p>'+
+      '<p>'+esc(x.explanation)+'</p><p class="quiet">这张卡已经有 '+history.length+' 次本机答题记录。只有真实完成无提示答题才会记作“独立正确”。</p></section>'+
+      '<section class="form-panel" style="margin-top:15px"><h3>写下你的记法</h3><p class="form-note">笔记仅保存在你自己的浏览器，不会公开发布。</p>'+
+      '<form id="noteForm"><div class="form-row"><label for="noteText">我的联想或改进建议</label><textarea class="form-control" id="noteText" maxlength="300" required placeholder="我还有一种更好记的方式…"></textarea></div>'+
+      '<button class="btn-secondary" type="submit">保存笔记</button></form>'+
+      (state.notes[x.id]||[]).map(function(n){return '<p style="margin-top:10px;padding:11px;background:#faf9fd;border-radius:11px">'+esc(n)+'</p>';}).join('')+'</section>';
+  }
+  function review(){
+    var practiced=allLessons().filter(function(x){return (state.attempts[x.id]||[]).length;});
+    var due=practiced.filter(function(x){return ['待复习','需巩固'].includes(status(x.id));});
+    var next=due.length?due:practiced.slice(0,6);
+    return head('ACTIVE RECALL','让记忆经得起时间','先回忆，再核对。系统按本机真实练习记录建议复习；同一轮提示后的答对不会算作独立成功。')+
+      '<div class="stats-strip"><div class="stat"><strong>'+practiced.length+'</strong><small>已尝试知识点</small></div>'+
+      '<div class="stat"><strong>'+due.length+'</strong><small>当前可复习</small></div>'+
+      '<div class="stat"><strong>'+statistics().independent+'</strong><small>独立正确轮次</small></div></div>'+
+      section(due.length?'今天可以再试的知识':'你的回忆练习','RETRIEVAL PRACTICE')+
+      (next.length?'<div class="lesson-grid">'+next.map(lessonCard).join('')+'</div>':
+        '<div class="empty-state"><span class="empty-icon">◎</span><h3>还没有复习记录</h3><p>先完成一次独立回忆，之后这里会根据答题情况安排复习。</p>'+button('挑选第一张学习卡','goto-catalog','','btn-primary')+'</div>')+
+      '<div class="prose-card" style="margin-top:20px"><b>复习节奏</b><p>独立正确后建议在约 1、3、7、14 天等间隔再次练习；这是建议而非已完成的自动提醒，暂不跨设备同步。</p></div>';
+  }
+  function create(){
+    var subjects=Array.from(new Set(C.TOPICS.map(function(t){return t.subject;}))).concat(['其他学习']);
+    var methods=Array.from(new Set(C.LESSONS.map(function(x){return x.method;}))).concat(['口诀','地点','手指','其他']);
+    return head('CREATE SOMETHING MEMORABLE','创作一张独特的记忆卡','从真实知识出发，把理解线索、回忆问题和答案分开。画面、故事、组块都可以，但不要让提示直接泄露答案。')+
+      '<section class="form-panel"><form id="createForm"><div class="form-grid"><div class="form-row"><label for="customSubject">学科分类</label><select class="form-control" id="customSubject">'+
+      subjects.map(function(x){return '<option>'+esc(x)+'</option>';}).join('')+'</select></div>'+
+      '<div class="form-row"><label for="customMethod">主记忆方法</label><select class="form-control" id="customMethod">'+methods.map(function(x){return '<option>'+esc(x)+'</option>';}).join('')+'</select></div>'+
+      '<div class="form-row wide"><label for="customTitle">记忆任务标题</label><input class="form-control" id="customTitle" required maxlength="65" placeholder="例如：二分查找的前提"></div>'+
+      '<div class="form-row wide"><label for="customCue">帮助理解的记忆线索</label><textarea class="form-control" id="customCue" required maxlength="1200" placeholder="用具体的画面、操作或事实帮助理解…"></textarea></div>'+
+      '<div class="form-row wide"><label for="customQuestion">遮住线索后，问什么？</label><input class="form-control" id="customQuestion" required maxlength="250" placeholder="一道能无提示独立回答的问题"></div>'+
+      '<div class="form-row wide"><label for="customAnswer">参考正确答案</label><input class="form-control" id="customAnswer" required maxlength="300" placeholder="填写可逐字核对的答案"></div>'+
+      '<div class="form-row wide"><label for="customPhoto">可选：自己的记忆图片（小于 1MB）</label><input class="form-control" type="file" id="customPhoto" accept="image/png,image/jpeg,image/webp"></div></div>'+
+      '<button class="btn-primary" type="submit">保存作品并试记 ↗</button><p class="form-note">作品保存在本浏览器，不会上传到服务器。请勿使用包含个人隐私的照片发布可分享文件。</p></form></section>';
+  }
+  function safePhoto(s){return typeof s==='string' && s.length<3200000 && /^data:image\/(png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(s);}
+  function fileToData(file,max){
+    return new Promise(function(resolve,reject){
+      if(!file){resolve('');return;}
+      if(file.size>max||!['image/png','image/jpeg','image/webp'].includes(file.type)){reject(new Error('仅支持小于 '+Math.round(max/1024)+'KB 的 PNG/JPEG/WebP 图片'));return;}
+      var r=new FileReader();r.onload=function(){resolve(r.result);};r.onerror=function(){reject(new Error('无法读取图片'));};r.readAsDataURL(file);
+    });
+  }
+  function community(){
+    var current=state.bottles.find(function(b){return b.id===ui.bottleId;});
+    var panel='';
+    if(ui.composeBottle)panel='<section class="form-panel"><h3>装进一张口诀漂流瓶</h3><form id="bottleForm">'+
+      '<div class="form-row"><label for="bottleTask">希望朋友帮你记住什么？</label><textarea class="form-control" id="bottleTask" required maxlength="180"></textarea></div>'+
+      '<div class="form-row"><label for="bottlePhoto">任务照片（小于 1MB）</label><input class="form-control" type="file" id="bottlePhoto" accept="image/png,image/jpeg,image/webp" required></div>'+
+      '<button class="btn-primary" type="submit">保存瓶子</button></form></section>';
+    if(current)panel='<section class="form-panel"><h3>'+esc(current.task)+'</h3>'+
+      (safePhoto(current.photo)?'<img alt="漂流瓶照片" src="'+attr(current.photo)+'" style="width:100%;max-height:240px;object-fit:contain;border-radius:14px;margin:15px 0">':'')+
+      '<p class="form-note">通过导出 JSON 文件发送给朋友；当前没有在线社区或即时消息。</p>'+
+      (current.mine?button('导出瓶子文件','export-bottle','data-id="'+attr(current.id)+'"','btn-primary'):
+        '<form id="replyForm"><div class="form-row"><label>你的昵称</label><input id="replyNick" class="form-control" required maxlength="24"></div>'+
+        '<div class="form-row"><label>你的口诀</label><textarea id="replyLine" class="form-control" required maxlength="180"></textarea></div>'+
+        '<button type="submit" class="btn-primary">导出回信文件</button></form>')+
+      '<div class="divider"></div><h3>收到的口诀</h3>'+
+      (current.replies||[]).map(function(r,k){return '<div class="bottle-entry"><strong>'+esc(r.nick)+'</strong><p>'+esc(r.line)+'</p>'+
+        (current.best===k?'<span class="detail-pill">✦ 瓶主精选</span>':current.mine?button('精选这条','pick-reply','data-id="'+attr(current.id)+'" data-index="'+k+'"'):'')+'</div>';}).join('')+
+      '<p class="form-note">外部回信需要导入 JSON 文件才会出现在此处。</p></section>';
+    return head('CREATE TOGETHER','速记交友 · 口诀漂流瓶','分享一张照片和一个难记任务，让别人回一句口诀。当前以本地文件交换演示互动，不假装已经联网或存在真实陌生人。')+
+      '<div class="accent-panel"><span class="eyebrow">A LITTLE MEMORY FOR SOMEONE</span><h2 style="margin:8px 0">你提供画面，<br>另一个人提供灵感。</h2>'+
+      '<p class="muted" style="margin:9px 0 17px">分享的是助记的方式，不是虚构的学习效果。</p>'+
+      button('发布漂流瓶 ↗','new-bottle','','btn-primary')+'</div>'+
+      '<section class="form-panel" style="margin-bottom:17px"><h3>导入朋友的漂流瓶或回信</h3><p class="form-note">仅接受本应用导出的 JSON 文件；导入之前请检查来源。</p>'+
+      '<input id="importBottle" type="file" accept=".json,application/json" class="form-control" style="margin-top:12px"></section>'+
+      panel+'<div class="section-top"><h2>我的瓶子</h2><span class="quiet">'+state.bottles.length+' 个</span></div>'+
+      (state.bottles.length?'<div class="bottle-list">'+state.bottles.map(function(b){
+        return '<button class="topic-list-item" data-action="open-bottle" data-id="'+attr(b.id)+'"><span class="topic-thumb tone-mint">✉</span>'+
+        '<span><h3>'+esc(b.task)+'</h3><p>'+(b.mine?'我发出的':'收到的')+' · '+((b.replies||[]).length)+' 条回信</p></span><span class="list-arrow">↗</span></button>';}).join('')+'</div>':
+        '<div class="empty-state"><span class="empty-icon">✉</span><h3>海边还是空的</h3><p>创作你的第一张照片口诀任务。</p></div>');
+  }
+  function profile(){
+    var saved=allLessons().filter(function(x){return state.saved[x.id];}), stat=statistics();
+    return head('MY LITTLE UNIVERSE','我的记忆空间','收藏想学的内容，查看独立练习记录。当前数据只在本设备浏览器本地保存。')+
+      '<div class="profile-stats"><div><strong>'+saved.length+'</strong><small>收藏作品</small></div>'+
+      '<div><strong>'+stat.attempts+'</strong><small>答题记录</small></div><div><strong>'+stat.independent+'</strong><small>独立正确</small></div></div>'+
+      section('收藏的学习卡','MY SAVED CARDS')+
+      (saved.length?'<div class="lesson-grid">'+saved.map(lessonCard).join('')+'</div>':
+        '<div class="empty-state"><span class="empty-icon">♡</span><h3>还没有收藏的卡片</h3><p>遇到喜欢的记法，点开学习卡并选择收藏。</p>'+button('发现学习卡','goto-catalog','','btn-primary')+'</div>')+
+      section('下一步：记忆宫殿','COMING LATER')+
+      '<div class="prose-card"><b>记忆宫殿还在规划中</b><p>未来先请你确认熟悉路线、地点桩顺序与数量，再安放真正需要记忆的知识；不会随意给你虚构“已掌握”的记忆效果。</p></div>'+
+      '<div class="section-top"><h2>我的数据</h2></div><div class="prose-card"><p>学习记录、收藏、创作和漂流瓶目前均存储在本浏览器。清理浏览器数据可能使它们消失。</p>'+
+      '<div style="margin-top:13px">'+button('导出本机学习数据','export-data')+'</div></div>';
+  }
+  function rail(){
+    var stat=statistics(), target=5, pct=Math.min(100,Math.round(stat.attempts/target*100)), today=new Date();
+    var labels=['日','一','二','三','四','五','六'];
+    var marks=Array.from({length:7},function(_,i){
+      var d=new Date(today.getTime()-(6-i)*86400000);
+      var at=Array.prototype.concat.apply([],Object.values(state.attempts).filter(Array.isArray));
+      var has=at.some(function(a){return a.at && a.at.slice(0,10)===d.toISOString().slice(0,10);});
+      return '<span class="rail-day"><small>'+labels[d.getDay()]+'</small><b class="'+(i===6?'today':'')+'">'+(has?'✓':'·')+'</b></span>';
+    }).join('');
+    return '<div class="rail-card"><div class="rail-heading"><span>学习轨迹</span><small>LOCAL ONLY</small></div>'+
+      '<div class="rail-streak">'+stat.attempts+' <span>次实际答题</span></div>'+
+      '<div class="progress-track"><span style="width:'+pct+'%"></span></div>'+
+      '<p class="rail-note">体验目标：5 次独立或提示后练习，不代表知识已掌握。</p><div class="rail-days">'+marks+'</div></div>'+
+      '<div class="rail-tip"><div class="rail-orbit">◎ ✦</div><h3>知道 ≠ 记住</h3>'+
+      '<p>复习之前先遮住答案。真正的独立回忆，需要在不同时间再次验证。</p>'+
+      '<button class="text-link" data-nav="review">打开复习空间 ↗</button></div>'+
+      '<div class="rail-card"><div class="rail-heading"><span>今天的灵感</span><small>TIP 01</small></div>'+
+      '<p class="rail-note" style="line-height:1.9">先让内容有意义，再为难记的部分添加一个简单、可逆的提示。</p>'+
+      '<div class="divider"></div><span class="eyebrow">MEMORY DUET</span><p class="quiet" style="margin-top:7px">学习，可以有你的方法。</p></div>';
+  }
+  function render(){
+    var pages={home:home,catalog:catalog,topics:topics,topic:topic,lesson:lesson,review:review,create:create,community:community,profile:profile};
+    APP.innerHTML=(pages[ui.view]||home)();RAIL.innerHTML=rail();
+    document.querySelectorAll('[data-nav]').forEach(function(n){var a=n.dataset.nav===ui.view||(ui.view==='lesson'&&n.dataset.nav==='catalog')||(ui.view==='topic'&&n.dataset.nav==='topics');n.classList.toggle('active',a);});
+    SEARCH.value=ui.search;
+    document.title=ui.view==='home'?'Memory Duet · 记忆搭子':'记忆搭子 · '+({catalog:'分类学习',topics:'专题图书馆',lesson:'独立记忆练习',review:'回忆练习',profile:'我的空间',create:'创作记忆卡',community:'口诀漂流瓶'}[ui.view]||'专题学习');
+  }
+  function promptText(x){
+    return '请为学习任务《'+x.title+'》创作一张清晰的教学助记插画。\n主方法：'+x.method+'。\n知识线索：'+x.cue+
+      '\n目标答案（仅供构图核对，画面不要直接写出答案）：'+x.answer+
+      '\n要求：动作、空间、顺序或组块关系清晰；无误导性历史或科学“实拍”画面；文字尽量少；兼容竖屏。';
+  }
+  function download(obj,filename){
+    var url=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json;charset=utf-8'}));
+    var a=document.createElement('a');a.href=url;a.download=filename+'.json';document.body.append(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(url);},800);
+  }
+  function saveAttempt(x,answer,outcome){
+    if(!Array.isArray(state.attempts[x.id]))state.attempts[x.id]=[];
+    state.attempts[x.id].push({at:new Date().toISOString(),outcome:outcome,answer:answer.slice(0,400)});
+    persist();
+  }
+  document.addEventListener('click',function(event){
+    var nav=event.target.closest('[data-nav]');
+    if(nav){event.preventDefault();setView(nav.dataset.nav);return;}
+    var el=event.target.closest('[data-action]');
+    if(!el)return;
+    var action=el.dataset.action,id=el.dataset.id;
+    if(action==='goto-catalog')setView('catalog');
+    else if(action==='goto-topics')setView('topics');
+    else if(action==='open-topic')setView('topic',{topicId:id});
+    else if(action==='open-lesson')setView('lesson',{lessonId:id});
+    else if(action==='back-to-topic'){var x=one(ui.lessonId);if(x && C.topicsById[x.topicId])setView('topic',{topicId:x.topicId});else setView('catalog');}
+    else if(action==='topic-to-filter')setView('catalog',{dimension:'topic',value:el.dataset.value});
+    else if(action==='filter-value'){ui.value=el.dataset.value;render();}
+    else if(action==='only-saved'){ui.onlySaved=!ui.onlySaved;render();}
+    else if(action==='clear-filter'){ui.value='全部';ui.search='';ui.onlySaved=false;render();}
+    else if(action==='toggle-saved'){state.saved[id]=!state.saved[id];persist();render();toast(state.saved[id]?'已加入收藏':'已取消收藏');}
+    else if(action==='start-quiz'){ui.phase='quiz';ui.hintUsed=false;render();var ans=document.getElementById('answerInput');if(ans)ans.focus();}
+    else if(action==='reveal-hint'){ui.hintUsed=true;render();}
+    else if(action==='retry-quiz'){ui.phase='quiz';ui.hintUsed=false;ui.result=null;render();}
+    else if(action==='next-lesson'){
+      var current=one(ui.lessonId), related=allLessons().filter(function(x){return x.topicId===current.topicId;});
+      var k=related.findIndex(function(x){return x.id===current.id;});
+      setView('lesson',{lessonId:related[(k+1)%related.length].id});
+    }
+    else if(action==='make-prompt'){
+      var v=document.getElementById('promptArea'),text=promptText(one(ui.lessonId));
+      v.innerHTML='<div class="form-row" style="margin-top:22px"><label for="promptOutput">可编辑的画面生成提示词</label><textarea id="promptOutput" class="form-control" rows="7" readonly>'+esc(text)+'</textarea><p class="form-note">目前仅生成文本提示词；图片生成服务需另行配置。</p>'+
+        button('复制提示词','copy-prompt')+'</div>';
+    }
+    else if(action==='copy-prompt'){var ta=document.getElementById('promptOutput');if(!ta)return;
+      if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(ta.value).then(function(){toast('提示词已复制');}).catch(function(){ta.select();toast('请手动复制已选中文本');});
+      else{ta.select();toast('请复制已选中文本');}
+    }
+    else if(action==='new-bottle'){ui.composeBottle=true;ui.bottleId=null;render();}
+    else if(action==='open-bottle'){ui.bottleId=id;ui.composeBottle=false;render();}
+    else if(action==='export-bottle'){var b=state.bottles.find(function(x){return x.id===id;});if(b)download({type:'duet-bottle',id:b.id,task:b.task,photo:b.photo},'memory-duet-bottle');}
+    else if(action==='pick-reply'){var b2=state.bottles.find(function(x){return x.id===id;});if(b2&&b2.mine){b2.best=Number(el.dataset.index);persist();render();}}
+    else if(action==='export-data')download({type:'memory-duet-backup-v2',exportedAt:new Date().toISOString(),data:state},'memory-duet-my-data');
+  });
+  document.addEventListener('change',function(e){
+    if(e.target.id==='dimensionSelect'){ui.dimension=e.target.value;ui.value='全部';render();}
+    if(e.target.id==='valueSelect'){ui.value=e.target.value;render();}
+    if(e.target.id==='sortSelect'){ui.sort=e.target.value;render();}
+    if(e.target.id==='importBottle'){importBottleFile(e.target.files[0]);}
+  });
+  SEARCH.addEventListener('input',function(e){
+    ui.search=e.target.value;
+    if(ui.view!=='catalog'){setView('catalog');SEARCH.focus();SEARCH.setSelectionRange(SEARCH.value.length,SEARCH.value.length);}
+    else {var r=document.getElementById('catalogResults');if(r)r.innerHTML=catalogResults();}
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='/' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && !e.ctrlKey && !e.metaKey){e.preventDefault();SEARCH.focus();}
+    if(e.key==='Escape' && document.activeElement===SEARCH){SEARCH.value='';ui.search='';if(ui.view==='catalog'){var r=document.getElementById('catalogResults');if(r)r.innerHTML=catalogResults();}SEARCH.blur();}
+  });
+  document.addEventListener('submit',async function(e){
+    if(e.target.id==='quizForm'){
+      e.preventDefault();var x=one(ui.lessonId),a=document.getElementById('answerInput').value.trim();
+      if(!a)return;var correct=C.evaluateAnswer(x,a),outcome=correct?(ui.hintUsed?'prompted-correct':'independent-correct'):'incorrect';
+      saveAttempt(x,a,outcome);ui.phase='result';ui.result={outcome:outcome,answer:a};render();
+    }
+    if(e.target.id==='noteForm'){
+      e.preventDefault();var note=document.getElementById('noteText').value.trim();
+      if(note){(state.notes[ui.lessonId]||=[]).push(note);persist();render();toast('已保存到本机笔记');}
+    }
+    if(e.target.id==='createForm'){
+      e.preventDefault();var data={
+        id:'user-'+Date.now()+'-'+Math.floor(Math.random()*10000),
+        title:document.getElementById('customTitle').value.trim(),
+        subject:document.getElementById('customSubject').value,
+        method:document.getElementById('customMethod').value,
+        cue:document.getElementById('customCue').value.trim(),
+        question:document.getElementById('customQuestion').value.trim(),
+        answer:document.getElementById('customAnswer').value.trim()
+      };
+      if(!data.title||!data.cue||!data.question||!data.answer)return;
+      try{data.photo=await fileToData(document.getElementById('customPhoto').files[0],1024*1024);}
+      catch(ex){toast(ex.message);return;}
+      state.custom.push(makeCustom(data));persist();setView('lesson',{lessonId:data.id});toast('原创学习卡已保存到本机');
+    }
+    if(e.target.id==='bottleForm'){
+      e.preventDefault();var task=document.getElementById('bottleTask').value.trim();
+      if(!task)return;
+      try{var photo=await fileToData(document.getElementById('bottlePhoto').files[0],1024*1024);}
+      catch(ex){toast(ex.message);return;}
+      var bottle={id:'b-'+Date.now()+'-'+Math.random().toString(16).slice(2),task:task,photo:photo,mine:true,replies:[],best:-1};
+      state.bottles.push(bottle);persist();ui.bottleId=bottle.id;ui.composeBottle=false;render();
+    }
+    if(e.target.id==='replyForm'){
+      e.preventDefault();var b=state.bottles.find(function(x){return x.id===ui.bottleId;});
+      var nick=document.getElementById('replyNick').value.trim(),line=document.getElementById('replyLine').value.trim();
+      if(b && nick && line)download({type:'duet-reply',id:b.id,nick:nick,line:line},'memory-duet-reply');
+    }
+  });
+  async function importBottleFile(file){
+    if(!file)return;
+    if(file.size>3300000){toast('文件过大');return;}
+    try{
+      var data=JSON.parse(await file.text());
+      if(!data||typeof data.id!=='string'||data.id.length>100)throw Error('文件格式错误');
+      var existing=state.bottles.find(function(b){return b.id===data.id;});
+      if(data.type==='duet-bottle'){
+        if(!existing){
+          if(typeof data.task!=='string'||!data.task.trim()||data.task.length>180||!safePhoto(data.photo))throw Error('瓶子内容不合法');
+          state.bottles.push({id:data.id,task:data.task,photo:data.photo,mine:false,replies:[],best:-1});
+        }
+      }else if(data.type==='duet-reply'){
+        if(!existing||!existing.mine||typeof data.nick!=='string'||data.nick.length>24||typeof data.line!=='string'||data.line.length>180||!data.line.trim())throw Error('未找到对应的已发布瓶子');
+        if(!(existing.replies||[]).some(function(r){return r.nick===data.nick && r.line===data.line;})){
+          (existing.replies||=[]).push({nick:data.nick,line:data.line});
+        }
+      }else throw Error('不是 Memory Duet 漂流瓶文件');
+      persist();ui.bottleId=data.id;ui.composeBottle=false;render();toast('已导入并保存到本机');
+    }catch(ex){toast('导入失败：'+ex.message);}
+  }
+  render();
+  if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')){
+    window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js').catch(function(){});});
+  }
+})();
