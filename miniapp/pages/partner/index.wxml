@@ -1,0 +1,16 @@
+<view wx:if="{{user}}" class="container">
+  <view wx:if="{{error}}" class="sub">{{error}}</view>
+  <view class="label">MEMORY PARTNER</view><view class="title">{{user.nickname}}</view>
+  <view class="card"><view class="sub">{{user.posts}} 只漂流瓶 · {{user.followers}} 个关注</view>
+    <view class="sub">{{user.interests.join(' · ')}}</view>
+    <view class="row"><button class="button small" bindtap="follow">{{user.followed?'取消关注':'＋ 关注'}}</button>
+      <button class="small" bindtap="block">屏蔽</button></view>
+  </view>
+  <view wx:if="{{user.mutual}}" class="card">
+    <view class="title">搭子私信</view><view class="sub">彼此关注才能发送。不要分享隐私。</view>
+    <view wx:for="{{messages}}" wx:key="id" class="message"><view class="sub">{{item.sender===guest.id?'我':'对方'}}</view><view>{{item.content}}</view></view>
+    <textarea class="control text" maxlength="500" placeholder="给搭子发一句话…" bindinput="input" value="{{content}}"/>
+    <button class="button" bindtap="send">发送</button>
+  </view>
+  <view wx:else class="card"><view class="sub">互相关注后才能交流。</view></view>
+</view>

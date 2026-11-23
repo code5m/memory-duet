@@ -4,7 +4,7 @@
   if (!C) { document.getElementById('app').textContent='学习内容加载失败，请刷新页面。';return; }
   var APP=document.getElementById('app'), RAIL=document.getElementById('rail'), SEARCH=document.getElementById('globalSearch');
   var STORAGE='memoryDuetV2', state=load(), ui={
-    view:'home',dimension:'subject',value:'全部',search:'',onlySaved:false,sort:'curated',
+    view:'home',dimension:'subject',value:'全部',facets:{},search:'',onlySaved:false,sort:'curated',
     topicId:null,lessonId:null,phase:'study',hintUsed:false,result:null,bottleId:null,composeBottle:false
   };
   var seedMap=['en-lend','en-lend','en-lend','mem-zero','cn-moon1'];
@@ -13,7 +13,7 @@
   if (['home','catalog','topics','review','create','community','profile'].includes(startHash)) ui.view=startHash;
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function attr(s){return esc(s);}
-  function initial(){return {saved:{},attempts:{},custom:[],bottles:[],notes:{},likes:{}};}
+  function initial(){return {saved:{},attempts:{},custom:[],customDimensions:[],bottles:[],notes:{},likes:{}};}
   function load(){try{var s=JSON.parse(localStorage.getItem(STORAGE));if(s && typeof s==='object')return Object.assign(initial(),s);}catch(e){}return initial();}
   function persist(){try{localStorage.setItem(STORAGE,JSON.stringify(state));return true;}catch(e){toast('本机存储空间不足；新内容可能无法在刷新后保留。');return false;}}
   function migrateLegacy(){
@@ -33,6 +33,9 @@
     state.legacyMigrated=true;persist();
   }
   function toast(msg){var n=document.getElementById('toast');n.textContent=msg;n.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(function(){n.hidden=true;},3600);}
+  function allDimensions(){return C.DIMENSIONS.concat(state.customDimensions||[]);}
+  var originalFacetValue=C.facetValue;
+  C.facetValue=function(x,key,context){return key.startsWith('custom:')?((x.customFacets||{})[key]||'未分类'):originalFacetValue(x,key,context);};
   function allLessons(){return C.LESSONS.concat(state.custom||[]);}
   function one(id){return allLessons().find(function(x){return x.id===id;});}
   function makeCustom(x){
@@ -60,7 +63,7 @@
     ui.view=view;options=options||{};
     if(options.topicId)ui.topicId=options.topicId;
     if(options.lessonId){ui.lessonId=options.lessonId;ui.phase='study';ui.result=null;ui.hintUsed=false;}
-    if(options.dimension){ui.dimension=options.dimension;ui.value=options.value||'全部';}
+    if(options.dimension){ui.dimension=options.dimension;ui.value=options.value||'全部';if(options.value&&options.value!=='全部')ui.facets[options.dimension]=[options.value];}
     if(options.value && !options.dimension)ui.value=options.value;
     if(view!=='catalog' && SEARCH.value){/* Keep user search available until explicitly cleared. */}
     history.replaceState(null,'','#'+view);
@@ -104,23 +107,47 @@
     return '<section class="page-head"><span class="eyebrow">'+esc(label)+'</span><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p></section>';
   }
   function catalog(){
-    var dim=C.DIMENSIONS.find(function(x){return x.key===ui.dimension;})||C.DIMENSIONS[0];
-    var values=C.facetOptions(allLessons(),dim.key,{attempts:state.attempts,saved:state.saved});
-    var q=ui.search;
-    return head('LEARN YOUR WAY','自由切换 30 种学习视角','同一张学习卡可以按学科、目标、方法、难度、学习阶段、复习状态等维度重新排列。先选维度，再选内容，不需要重复建分类。')+
-      '<section class="filter-card"><div class="filter-top"><label class="filter-field"><span class="field-label">分类维度 · '+C.DIMENSIONS.length+' 种</span><select class="form-control" id="dimensionSelect" aria-label="切换分类维度">'+
-      C.DIMENSIONS.map(function(x){return '<option value="'+attr(x.key)+'" '+(x.key===dim.key?'selected':'')+'>'+esc(x.label)+'</option>';}).join('')+'</select></label>'+
-      '<label class="filter-field"><span class="field-label">当前分类值</span><select class="form-control" id="valueSelect" aria-label="筛选分类值"><option value="全部">全部</option>'+
-      values.map(function(x){return '<option value="'+attr(x)+'" '+(ui.value===x?'selected':'')+'>'+esc(x)+'</option>';}).join('')+'</select></label>'+
-      '<label class="filter-field"><span class="field-label">排序方式</span><select class="form-control" id="sortSelect"><option value="curated">精选顺序</option><option value="title" '+(ui.sort==='title'?'selected':'')+'>标题排序</option><option value="short" '+(ui.sort==='short'?'selected':'')+'>按学习时长</option></select></label></div>'+
-      '<div class="filter-chips" role="group" aria-label="'+esc(dim.label)+'的分类值">'+['全部'].concat(values.slice(0,11)).concat(ui.value!=='全部' && !values.slice(0,11).includes(ui.value)?[ui.value]:[]).map(function(v){
-        return '<button class="chip '+(ui.value===v?'active':'')+'" type="button" data-action="filter-value" data-value="'+attr(v)+'">'+esc(v)+'</button>';}).join('')+'</div>'+
-      '<div class="filter-bottom"><p>支持多视角浏览，筛选不会修改或复制学习内容。</p>'+
-      '<button class="filter-switch '+(ui.onlySaved?'active':'')+'" type="button" data-action="only-saved">'+(ui.onlySaved?'♥ 只看收藏中':'♡ 只看我的收藏')+'</button></div></section>'+
-      '<div id="catalogResults">'+catalogResults()+'</div>';
+    var dims=allDimensions(),dim=dims.find(x=>x.key===ui.dimension)||dims[0];
+    var context={saved:state.saved,attempts:state.attempts},values=C.facetOptions(allLessons(),dim.key,context);
+    var counts=C.facetCountMap(allLessons(),dim.key,{facets:ui.facets,search:ui.search,onlySaved:ui.onlySaved},context);
+    var active=ui.facets[dim.key]||[];
+    var chosen=Object.entries(ui.facets).flatMap(pair=>(pair[1]||[]).map(v=>({key:pair[0],name:(dims.find(x=>x.key===pair[0])||{}).label||pair[0],value:v})));
+    return head('CHOOSE YOUR OWN WAY','自由组合 '+dims.length+' 种分类维度',
+      '自由切换分类视角，也能组合多条件：不同维度同时满足，同一维度可多选；原创卡还可以自建分类。')+
+      '<section class="filter-card"><div class="filter-top"><label class="filter-field"><span class="field-label">分类维度 · '+dims.length+' 种</span><select class="form-control" id="dimensionSelect" aria-label="切换分类维度">'+
+      dims.map(x=>'<option value="'+attr(x.key)+'" '+(x.key===dim.key?'selected':'')+'>'+esc(x.label)+'</option>').join('')+'</select></label>'+
+      '<label class="filter-field"><span class="field-label">当前分类值 · 可多选</span><select class="form-control" id="valueSelect" aria-label="添加分类取值"><option value="全部">全部</option>'+
+      values.map(x=>'<option value="'+attr(x)+'" '+(ui.value===x?'selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label>'+
+      '<label class="filter-field"><span class="field-label">排序</span><select class="form-control" id="sortSelect"><option value="curated">精选顺序</option>'+
+      '<option value="title" '+(ui.sort==='title'?'selected':'')+'>标题排序</option>'+
+      '<option value="short" '+(ui.sort==='short'?'selected':'')+'>学习时长</option></select></label></div>'+
+      '<div class="filter-chips" role="group" aria-label="'+esc(dim.label)+'分类值">'+['全部'].concat(values).map(v=>
+      '<button class="chip '+((v==='全部'?!active.length:active.includes(v))?'active':'')+'" type="button" data-action="filter-value" data-value="'+attr(v)+'">'+
+      esc(v)+(v==='全部'?'':' <span style="opacity:.7">('+Number(counts[v]||0)+')</span>')+'</button>').join('')+'</div>'+
+      '<div class="filter-bottom"><p>组合逻辑：不同维度 AND，同一维度多个值 OR。</p>'+
+      '<button class="filter-switch '+(ui.onlySaved?'active':'')+'" type="button" data-action="only-saved">'+
+      (ui.onlySaved?'♥ 已筛选收藏':'♡ 只看收藏')+'</button></div></section>'+
+      '<section class="filter-card"><div class="filter-bottom" style="margin-top:0"><strong style="font-size:13px">组合筛选条件 · '+chosen.length+' 个</strong>'+
+      button('全部清除','clear-facets','','btn-secondary')+'</div><div class="filter-chips">'+
+      (chosen.length?chosen.map(c=>'<button type="button" class="chip active" data-action="remove-facet" data-dim="'+attr(c.key)+'" data-value="'+attr(c.value)+'">'+
+      esc(c.name)+'：'+esc(c.value)+' ×</button>').join(''):'<span class="quiet">可以换一个维度继续添加条件。</span>')+'</div></section>'+
+      '<details class="filter-card"><summary style="font-weight:800;cursor:pointer">＋ 自定义分类维度 / 给原创卡设置取值</summary>'+
+      '<p class="form-note">自建维度只存在本地。可为自己的原创学习卡指定任意分类名称和取值。</p>'+
+      '<form id="customDimensionForm" class="filter-top" style="margin-top:12px"><label class="filter-field"><span class="field-label">分类名称</span>'+
+      '<input id="newDimensionName" class="form-control" required maxlength="28" placeholder="例如：我的考试计划"></label>'+
+      '<button class="btn-primary" type="submit">新增维度</button></form>'+
+      (state.customDimensions.length&&state.custom.length?
+      '<form id="customFacetForm" class="filter-top" style="margin-top:15px"><label class="filter-field"><span class="field-label">我的原创学习卡</span>'+
+      '<select id="customFacetCard" class="form-control">'+state.custom.map(x=>'<option value="'+attr(x.id)+'">'+esc(x.title)+'</option>').join('')+'</select></label>'+
+      '<label class="filter-field"><span class="field-label">分类维度</span><select id="customFacetDimension" class="form-control">'+
+      state.customDimensions.map(d=>'<option value="'+attr(d.key)+'">'+esc(d.label)+'</option>').join('')+'</select></label>'+
+      '<label class="filter-field"><span class="field-label">分类值</span><input class="form-control" id="customFacetValue" required maxlength="40" placeholder="例如：第一周重点"></label>'+
+      '<button class="btn-primary" type="submit">应用到卡片</button></form>':
+      '<p class="form-note">先新增维度，并通过「创作记忆卡」创建自己的作品，就能设置取值。</p>')+
+      '</details><div id="catalogResults">'+catalogResults()+'</div>';
   }
   function catalogResults(){
-    var filtered=C.filterLessons(allLessons(),{dimension:ui.dimension,value:ui.value,search:ui.search,onlySaved:ui.onlySaved,sort:ui.sort},
+    var filtered=C.filterLessonsMulti(allLessons(),{facets:ui.facets,search:ui.search,onlySaved:ui.onlySaved,sort:ui.sort},
       {saved:state.saved,attempts:state.attempts});
     return '<div class="section-top" style="margin-top:0"><div><span class="eyebrow">EXPLORE KNOWLEDGE</span><h2>找到适合自己的记法</h2></div><span class="quiet">共 '+filtered.length+' 张学习卡</span></div>'+
       (filtered.length?'<div class="lesson-grid">'+filtered.map(lessonCard).join('')+'</div>':
@@ -129,7 +156,7 @@
   function topics(){
     var groups={};
     C.TOPICS.forEach(function(t){(groups[t.subject]||=[]).push(t);});
-    return head('THE TOPIC LIBRARY','专题图书馆','精选 22 个可直接试学的专题，从英语、语文、数学到科学、编程、工作与生活。每个专题都提供理解线索和独立回忆题。')+
+    return head('THE TOPIC LIBRARY','专题图书馆','精选 '+C.TOPICS.length+' 个可直接试学的专题，从英语、语文、数学到科学、编程、工作与生活。每个专题都提供理解线索和独立回忆题。')+
       Object.keys(groups).map(function(subject){return section(subject,subject.toUpperCase())+
         '<div class="topic-grid">'+groups[subject].map(topicCard).join('')+'</div>';}).join('');
   }
@@ -141,7 +168,8 @@
       '<h1>'+esc(t.title)+'</h1><p>'+esc(t.subtitle)+'。每张卡先看解释，再遮住线索回忆。</p>'+
       '<div class="detail-actions">'+button('开始专题学习 ↗','open-lesson','data-id="'+attr(lessons[0].id)+'"','btn-primary')+
       button('切换分类视角','topic-to-filter','data-value="'+attr(t.title)+'"')+'</div></div><div class="detail-illustration">'+esc(t.icon)+'</div></section>'+
-      section('专题中的知识卡','LEARNING CARDS')+'<div class="lesson-grid">'+lessons.map(lessonCard).join('')+'</div>';
+      C.getTopicChapters(t.id).map(ch=>section(ch.title,'TOPIC CHAPTER')+'<p class="muted" style="font-size:12px;margin:-7px 0 16px">'+esc(ch.intro)+'</p>'+
+      '<div class="lesson-grid">'+ch.lessonIds.map(id=>lessons.find(x=>x.id===id)).filter(Boolean).map(lessonCard).join('')+'</div>').join('');
   }
   function lesson(){
     var x=one(ui.lessonId);if(!x)return catalog();
@@ -224,36 +252,7 @@
       var r=new FileReader();r.onload=function(){resolve(r.result);};r.onerror=function(){reject(new Error('无法读取图片'));};r.readAsDataURL(file);
     });
   }
-  function community(){
-    var current=state.bottles.find(function(b){return b.id===ui.bottleId;});
-    var panel='';
-    if(ui.composeBottle)panel='<section class="form-panel"><h3>装进一张口诀漂流瓶</h3><form id="bottleForm">'+
-      '<div class="form-row"><label for="bottleTask">希望朋友帮你记住什么？</label><textarea class="form-control" id="bottleTask" required maxlength="180"></textarea></div>'+
-      '<div class="form-row"><label for="bottlePhoto">任务照片（小于 1MB）</label><input class="form-control" type="file" id="bottlePhoto" accept="image/png,image/jpeg,image/webp" required></div>'+
-      '<button class="btn-primary" type="submit">保存瓶子</button></form></section>';
-    if(current)panel='<section class="form-panel"><h3>'+esc(current.task)+'</h3>'+
-      (safePhoto(current.photo)?'<img alt="漂流瓶照片" src="'+attr(current.photo)+'" style="width:100%;max-height:240px;object-fit:contain;border-radius:14px;margin:15px 0">':'')+
-      '<p class="form-note">通过导出 JSON 文件发送给朋友；当前没有在线社区或即时消息。</p>'+
-      (current.mine?button('导出瓶子文件','export-bottle','data-id="'+attr(current.id)+'"','btn-primary'):
-        '<form id="replyForm"><div class="form-row"><label>你的昵称</label><input id="replyNick" class="form-control" required maxlength="24"></div>'+
-        '<div class="form-row"><label>你的口诀</label><textarea id="replyLine" class="form-control" required maxlength="180"></textarea></div>'+
-        '<button type="submit" class="btn-primary">导出回信文件</button></form>')+
-      '<div class="divider"></div><h3>收到的口诀</h3>'+
-      (current.replies||[]).map(function(r,k){return '<div class="bottle-entry"><strong>'+esc(r.nick)+'</strong><p>'+esc(r.line)+'</p>'+
-        (current.best===k?'<span class="detail-pill">✦ 瓶主精选</span>':current.mine?button('精选这条','pick-reply','data-id="'+attr(current.id)+'" data-index="'+k+'"'):'')+'</div>';}).join('')+
-      '<p class="form-note">外部回信需要导入 JSON 文件才会出现在此处。</p></section>';
-    return head('CREATE TOGETHER','速记交友 · 口诀漂流瓶','分享一张照片和一个难记任务，让别人回一句口诀。当前以本地文件交换演示互动，不假装已经联网或存在真实陌生人。')+
-      '<div class="accent-panel"><span class="eyebrow">A LITTLE MEMORY FOR SOMEONE</span><h2 style="margin:8px 0">你提供画面，<br>另一个人提供灵感。</h2>'+
-      '<p class="muted" style="margin:9px 0 17px">分享的是助记的方式，不是虚构的学习效果。</p>'+
-      button('发布漂流瓶 ↗','new-bottle','','btn-primary')+'</div>'+
-      '<section class="form-panel" style="margin-bottom:17px"><h3>导入朋友的漂流瓶或回信</h3><p class="form-note">仅接受本应用导出的 JSON 文件；导入之前请检查来源。</p>'+
-      '<input id="importBottle" type="file" accept=".json,application/json" class="form-control" style="margin-top:12px"></section>'+
-      panel+'<div class="section-top"><h2>我的瓶子</h2><span class="quiet">'+state.bottles.length+' 个</span></div>'+
-      (state.bottles.length?'<div class="bottle-list">'+state.bottles.map(function(b){
-        return '<button class="topic-list-item" data-action="open-bottle" data-id="'+attr(b.id)+'"><span class="topic-thumb tone-mint">✉</span>'+
-        '<span><h3>'+esc(b.task)+'</h3><p>'+(b.mine?'我发出的':'收到的')+' · '+((b.replies||[]).length)+' 条回信</p></span><span class="list-arrow">↗</span></button>';}).join('')+'</div>':
-        '<div class="empty-state"><span class="empty-icon">✉</span><h3>海边还是空的</h3><p>创作你的第一张照片口诀任务。</p></div>');
-  }
+  function community(){return window.MemoryDuetSocial?window.MemoryDuetSocial.view():'<section class="form-panel">交友模块尚未加载，请刷新页面。</section>';}
   function profile(){
     var saved=allLessons().filter(function(x){return state.saved[x.id];}), stat=statistics();
     return head('MY LITTLE UNIVERSE','我的记忆空间','收藏想学的内容，查看独立练习记录。当前数据只在本设备浏览器本地保存。')+
@@ -290,9 +289,10 @@
   function render(){
     var pages={home:home,catalog:catalog,topics:topics,topic:topic,lesson:lesson,review:review,create:create,community:community,profile:profile};
     APP.innerHTML=(pages[ui.view]||home)();RAIL.innerHTML=rail();
+    if(ui.view==='community'&&window.MemoryDuetSocial)window.MemoryDuetSocial.mount();
     document.querySelectorAll('[data-nav]').forEach(function(n){var a=n.dataset.nav===ui.view||(ui.view==='lesson'&&n.dataset.nav==='catalog')||(ui.view==='topic'&&n.dataset.nav==='topics');n.classList.toggle('active',a);});
     SEARCH.value=ui.search;
-    document.title=ui.view==='home'?'Memory Duet · 记忆搭子':'记忆搭子 · '+({catalog:'分类学习',topics:'专题图书馆',lesson:'独立记忆练习',review:'回忆练习',profile:'我的空间',create:'创作记忆卡',community:'口诀漂流瓶'}[ui.view]||'专题学习');
+    document.title=ui.view==='home'?'Memory Duet · 记忆搭子':'记忆搭子 · '+({catalog:'分类学习',topics:'专题图书馆',lesson:'独立记忆练习',review:'回忆练习',profile:'我的空间',create:'创作记忆卡',community:'记忆交友'}[ui.view]||'专题学习');
   }
   function promptText(x){
     return '请为学习任务《'+x.title+'》创作一张清晰的教学助记插画。\n主方法：'+x.method+'。\n知识线索：'+x.cue+
@@ -321,9 +321,15 @@
     else if(action==='open-lesson')setView('lesson',{lessonId:id});
     else if(action==='back-to-topic'){var x=one(ui.lessonId);if(x && C.topicsById[x.topicId])setView('topic',{topicId:x.topicId});else setView('catalog');}
     else if(action==='topic-to-filter')setView('catalog',{dimension:'topic',value:el.dataset.value});
-    else if(action==='filter-value'){ui.value=el.dataset.value;render();}
+    else if(action==='filter-value'){var v=el.dataset.value,items=(ui.facets[ui.dimension]||[]).slice();
+      if(v==='全部')delete ui.facets[ui.dimension];else{items=items.includes(v)?items.filter(x=>x!==v):items.concat([v]);
+      if(items.length)ui.facets[ui.dimension]=items;else delete ui.facets[ui.dimension];}
+      ui.value=v;render();}
+    else if(action==='remove-facet'){var k=el.dataset.dim;ui.facets[k]=(ui.facets[k]||[]).filter(x=>x!==el.dataset.value);
+      if(!ui.facets[k].length)delete ui.facets[k];render();}
+    else if(action==='clear-facets'){ui.facets={};ui.value='全部';render();}
     else if(action==='only-saved'){ui.onlySaved=!ui.onlySaved;render();}
-    else if(action==='clear-filter'){ui.value='全部';ui.search='';ui.onlySaved=false;render();}
+    else if(action==='clear-filter'){ui.value='全部';ui.facets={};ui.search='';ui.onlySaved=false;render();}
     else if(action==='toggle-saved'){state.saved[id]=!state.saved[id];persist();render();toast(state.saved[id]?'已加入收藏':'已取消收藏');}
     else if(action==='start-quiz'){ui.phase='quiz';ui.hintUsed=false;render();var ans=document.getElementById('answerInput');if(ans)ans.focus();}
     else if(action==='reveal-hint'){ui.hintUsed=true;render();}
@@ -349,8 +355,8 @@
     else if(action==='export-data')download({type:'memory-duet-backup-v2',exportedAt:new Date().toISOString(),data:state},'memory-duet-my-data');
   });
   document.addEventListener('change',function(e){
-    if(e.target.id==='dimensionSelect'){ui.dimension=e.target.value;ui.value='全部';render();}
-    if(e.target.id==='valueSelect'){ui.value=e.target.value;render();}
+    if(e.target.id==='dimensionSelect'){ui.dimension=e.target.value;ui.value=(ui.facets[ui.dimension]||[])[0]||'全部';render();}
+    if(e.target.id==='valueSelect'){ui.value=e.target.value;if(ui.value==='全部')delete ui.facets[ui.dimension];else ui.facets[ui.dimension]=[ui.value];render();}
     if(e.target.id==='sortSelect'){ui.sort=e.target.value;render();}
     if(e.target.id==='importBottle'){importBottleFile(e.target.files[0]);}
   });
@@ -364,6 +370,15 @@
     if(e.key==='Escape' && document.activeElement===SEARCH){SEARCH.value='';ui.search='';if(ui.view==='catalog'){var r=document.getElementById('catalogResults');if(r)r.innerHTML=catalogResults();}SEARCH.blur();}
   });
   document.addEventListener('submit',async function(e){
+    if(e.target.id==='customDimensionForm'){e.preventDefault();var label=document.getElementById('newDimensionName').value.trim();
+      if(!label)return;if(allDimensions().some(d=>d.label===label)){toast('该分类名已存在');return;}
+      var key='custom:'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7);
+      state.customDimensions.push({key,label});persist();ui.dimension=key;ui.value='全部';render();toast('新分类已建立');return;}
+    if(e.target.id==='customFacetForm'){e.preventDefault();var cardId=document.getElementById('customFacetCard').value,
+      key=document.getElementById('customFacetDimension').value,value=document.getElementById('customFacetValue').value.trim();
+      var card=state.custom.find(x=>x.id===cardId);if(!card||!value)return;
+      card.customFacets=card.customFacets||{};card.customFacets[key]=value;persist();
+      ui.dimension=key;ui.facets[key]=[value];ui.value=value;render();toast('已设置原创卡分类');return;}
     if(e.target.id==='quizForm'){
       e.preventDefault();var x=one(ui.lessonId),a=document.getElementById('answerInput').value.trim();
       if(!a)return;var correct=C.evaluateAnswer(x,a),outcome=correct?(ui.hintUsed?'prompted-correct':'independent-correct'):'incorrect';

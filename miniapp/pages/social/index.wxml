@@ -1,0 +1,102 @@
+<view class="container">
+  <view class="hero social-hero"><view class="label">MEMORY SOCIAL · GUEST MODE</view>
+    <view class="title">记忆很难，<text style="color:#6951d5">一起想办法。</text></view>
+    <view class="sub">太难记漂流瓶 · 记忆秘诀瓶 · 任意昵称免密码参与</view>
+  </view>
+  <view wx:if="{{error}}" class="error">{{error}}</view>
+  <view wx:if="{{!connected}}" class="card"><view class="title">共享社区未配置</view>
+    <view class="sub">请先部署 server.py 并在 miniapp/config.js 配置 HTTPS 服务域名。不能假装已有线上内容。</view></view>
+  <view wx:else>
+    <view class="card user-row">
+      <view wx:if="{{guest}}">游客 {{guest.nickname}} <text class="sub">· 免密码</text>
+        <text class="link" data-screen="profile" bindtap="switchScreen">设置</text></view>
+      <view wx:else>无需真实账号，可先浏览
+        <text class="link" data-screen="guest" bindtap="switchScreen">随便起昵称 ↗</text></view>
+    </view>
+    <scroll-view scroll-x class="social-tabs" enhanced="true">
+      <view class="tab {{screen==='feed'?'active':''}}" data-screen="feed" bindtap="switchScreen">广场</view>
+      <view class="tab {{screen==='matches'?'active':''}}" data-screen="matches" bindtap="switchScreen">找搭子</view>
+      <view class="tab {{screen==='challenges'?'active':''}}" data-screen="challenges" bindtap="switchScreen">挑战</view>
+      <view class="tab {{screen==='leaders'?'active':''}}" data-screen="leaders" bindtap="switchScreen">贡献榜</view>
+      <view class="tab {{screen==='inbox'?'active':''}}" data-screen="inbox" bindtap="switchScreen">私信</view>
+      <view class="tab {{screen==='saved'?'active':''}}" data-screen="saved" bindtap="switchScreen">收藏</view>
+    </scroll-view>
+
+    <view wx:if="{{screen==='guest'}}" class="card">
+      <view class="title">任意昵称 · 一键进入</view>
+      <view class="sub">不用密码、手机号和邮箱；昵称可以重复，清除本机记录后不能靠昵称找回。</view>
+      <input class="control" placeholder="写下你喜欢的昵称" maxlength="30" data-key="nickname" value="{{nickname}}" bindinput="field"/>
+      <input class="control" placeholder="兴趣：英语, 数学, 记忆训练（可选）" maxlength="160" data-key="interests" value="{{interests}}" bindinput="field"/>
+      <button class="button" bindtap="guestSubmit">立即进入 ↗</button>
+    </view>
+    <view wx:elif="{{screen==='feed'||screen==='saved'}}">
+      <view class="kind-grid">
+        <view class="kind kind-hard" data-kind="hard" bindtap="selectKind"><view class="symbol">◌</view><view class="card-title">太难记漂流瓶</view><view class="sub">求助：谁有更好记的方法？</view></view>
+        <view class="kind kind-secret" data-kind="secret" bindtap="selectKind"><view class="symbol">✦</view><view class="card-title">记忆秘诀瓶</view><view class="sub">分享：我发现了一个好方法。</view></view>
+      </view>
+      <view class="row chips"><text class="pill" data-kind="all" bindtap="selectKind">全部</text>
+        <text class="pill" data-kind="hard" bindtap="selectKind">太难记</text>
+        <text class="pill" data-kind="secret" bindtap="selectKind">记忆秘诀</text></view>
+      <view class="row"><input class="control search" placeholder="搜索知识或学科" value="{{search}}" bindinput="searchInput"/>
+        <text class="link" bindtap="search">搜索</text></view>
+      <view wx:for="{{feed}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="openBottle">
+        <view class="label">{{item.kindText}} · {{item.subject}}</view>
+        <view class="card-title">{{item.title}}</view><view class="sub">{{item.content}}</view>
+        <view class="card-footer">{{item.author.nickname}} · {{item.likes}} 赞 · {{item.replies}} 回信</view>
+      </view>
+      <view wx:if="{{!feed.length}}" class="empty">还没有符合条件的漂流瓶。</view>
+      <view class="row"><button class="button half" bindtap="random">随机捞瓶子</button>
+        <button class="button half" bindtap="newBottle">＋ 发布瓶子</button></view>
+    </view>
+    <view wx:elif="{{screen==='compose'}}" class="card">
+      <view class="title">发布记忆瓶</view>
+      <view class="row"><text class="pill" data-kind="hard" bindtap="selectPostKind">◌ 太难记</text>
+        <text class="pill" data-kind="secret" bindtap="selectPostKind">✦ 记忆秘诀</text></view>
+      <view class="sub">当前类型：{{postKind==='hard'?'太难记漂流瓶':'记忆秘诀瓶'}}</view>
+      <input class="control" placeholder="标题（必填）" maxlength="90" data-key="title" value="{{title}}" bindinput="field"/>
+      <textarea class="control textarea" placeholder="难记的知识、我的困难，或分享的秘诀步骤…" maxlength="1500" data-key="content" value="{{content}}" bindinput="field"/>
+      <picker range="{{subjects}}" bindchange="subjectChange"><view class="control">领域：{{subject}} ▾</view></picker>
+      <input class="control" placeholder="记忆方法（可选）" maxlength="60" data-key="method" value="{{method}}" bindinput="field"/>
+      <input class="control" placeholder="标签，逗号分隔" maxlength="160" data-key="tags" value="{{tags}}" bindinput="field"/>
+      <button bindtap="choosePhoto">添加记忆照片（可选，小于 500KB）</button>
+      <view wx:if="{{photo}}" class="sub">已选照片 ✓</view>
+      <view class="sub">发布内容公开可见；不要包含个人隐私。</view>
+      <button class="button" bindtap="publish">发布到记忆海岸 ↗</button>
+    </view>
+    <view wx:elif="{{screen==='matches'}}">
+      <view class="title">根据兴趣找搭子</view>
+      <view wx:for="{{matches}}" wx:key="id" class="card"><view class="row"><view class="card-title" data-id="{{item.id}}" bindtap="openPartner">{{item.nickname}}</view>
+        <text class="link" data-id="{{item.id}}" catchtap="toggleFollow">{{item.followed?'取消关注':'＋ 关注'}}</text></view>
+        <view class="sub">{{item.posts}} 个瓶子 · 共同兴趣 {{item.common_interests.join(' / ')}}</view>
+        <text wx:if="{{item.mutual}}" class="link" data-id="{{item.id}}" bindtap="openPartner">互相关注 · 发私信 ↗</text></view>
+      <view wx:if="{{!matches.length}}" class="empty">暂时没有匹配的搭子。</view>
+    </view>
+    <view wx:elif="{{screen==='challenges'}}">
+      <view class="title">结伴记忆挑战</view>
+      <view wx:for="{{challenges}}" wx:key="id" class="card">
+        <view class="card-title">{{item.title}}</view><view class="sub">{{item.description}}</view>
+        <view class="row"><text class="sub">{{item.joined}} 人参与</text>
+          <text class="link" data-id="{{item.id}}" data-action="{{item.joined?'complete':'join'}}" bindtap="challengeAction">
+          {{item.completed?'✓ 已自报完成':item.joined?'打卡完成':'加入挑战'}}</text></view></view>
+      <view class="sub">挑战完成为自报，不代表已通过独立回忆测验。</view>
+    </view>
+    <view wx:elif="{{screen==='leaders'}}">
+      <view class="title">海岸贡献榜</view><view class="sub">仅按公开发帖与回信排序，不代表记忆能力。</view>
+      <view wx:for="{{leaders}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="openPartner">
+        <view class="card-title">{{index+1}} · {{item.nickname}}</view>
+        <view class="sub">{{item.posts}} 个瓶子 · {{item.replies}} 次回信</view></view>
+    </view>
+    <view wx:elif="{{screen==='inbox'}}">
+      <view class="title">我的私信</view><view class="sub">互相关注才可以交流。</view>
+      <view wx:for="{{inbox}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="openPartner">
+        <view class="card-title">{{item.nickname}} ↗</view></view>
+    </view>
+    <view wx:elif="{{screen==='profile'}}" class="card">
+      <view class="title">游客个人名片</view>
+      <input class="control" placeholder="游客昵称" data-key="nickname" value="{{nickname}}" bindinput="field"/>
+      <input class="control" placeholder="兴趣：逗号分隔" data-key="interests" value="{{interests}}" bindinput="field"/>
+      <button class="button" bindtap="saveProfile">保存游客资料</button>
+      <button bindtap="changeGuest">切换为新游客</button>
+    </view>
+  </view>
+</view>

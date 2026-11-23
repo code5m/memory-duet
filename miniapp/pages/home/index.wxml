@@ -1,1 +1,9 @@
-<view class="container"><view class="hero"><view class="label">MEMORY DUET</view><view class="title">每个知识点，都有好记的办法。</view><view class="sub">探索 {{dimensions}} 种分类维度，先理解，再独立回忆。</view><button class="button" bindtap="open">开始探索 ↗</button></view><view class="title">精选专题</view><view wx:for="{{topics}}" wx:key="id" class="card" bindtap="open"><view class="title">{{item.icon}} {{item.title}}</view><view class="sub">{{item.subject}} · {{item.subtitle}}</view></view></view>
+<view class="container"><view class="hero"><view class="label">MEMORY DUET · LEARN YOUR WAY</view>
+  <view class="title">每个知识点，都有好记的办法。</view>
+  <view class="sub">探索 {{dimensions}} 种分类维度、{{topics.length}} 个专题和 {{lessons}} 张学习卡。</view>
+  <button class="button" bindtap="catalog">开始分类学习 ↗</button>
+  <button style="margin-top:20rpx" bindtap="social">去记忆海岸交友 ✦</button></view>
+  <view class="title">精选专题</view>
+  <view wx:for="{{topics}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="openTopic">
+    <view class="title">{{item.icon}} {{item.title}}</view><view class="sub">{{item.subject}} · {{item.subtitle}}</view>
+  </view></view>

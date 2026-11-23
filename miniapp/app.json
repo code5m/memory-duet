@@ -3,6 +3,9 @@
     "pages/home/index",
     "pages/catalog/index",
     "pages/lesson/index",
+    "pages/social/index",
+    "pages/bottle/index",
+    "pages/partner/index",
     "pages/profile/index"
   ],
   "window": {
@@ -22,6 +25,10 @@
       {
         "pagePath": "pages/catalog/index",
         "text": "分类"
+      },
+      {
+        "pagePath": "pages/social/index",
+        "text": "交友"
       },
       {
         "pagePath": "pages/profile/index",

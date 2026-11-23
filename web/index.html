@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f8f7f4">
-  <meta name="description" content="记忆搭子 Memory Duet：把知识变成记得住的画面、故事和练习。30 种自由切换的学习分类维度，原创专题与独立回忆。">
+  <meta name="description" content="记忆搭子 Memory Duet：把知识变成记得住的画面、故事和练习。30 种以上自由组合的分类维度、章节专题和匿名记忆搭子社区。">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./social.css">
   <title>Memory Duet · 记忆搭子</title>
 </head>
 <body>
@@ -29,7 +30,7 @@
         <span class="sidebar-caption">一起创造</span>
         <nav class="side-links">
           <button type="button" data-nav="create" class="side-link"><span class="nav-icon">✎</span>创作记忆卡</button>
-          <button type="button" data-nav="community" class="side-link"><span class="nav-icon">♧</span>口诀漂流瓶</button>
+          <button type="button" data-nav="community" class="side-link"><span class="nav-icon">♧</span>记忆交友 <span class="nav-hint">NEW</span></button>
           <button type="button" data-nav="profile" class="side-link"><span class="nav-icon">◉</span>我的空间</button>
         </nav>
       </div>
@@ -59,13 +60,15 @@
     <button type="button" data-nav="home" class="active"><span>⌂</span><small>首页</small></button>
     <button type="button" data-nav="catalog"><span>▦</span><small>分类</small></button>
     <button type="button" data-nav="topics"><span>◈</span><small>专题</small></button>
-    <button type="button" data-nav="review"><span>◎</span><small>复习</small></button>
+    <button type="button" data-nav="community"><span>♧</span><small>交友</small></button>
     <button type="button" data-nav="profile"><span>◉</span><small>我的</small></button>
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <noscript><div class="no-js">请启用 JavaScript，以使用 Memory Duet 的交互式学习内容。</div></noscript>
   <script src="./data/catalog.js" defer></script>
+  <script src="./data/expansion.js" defer></script>
+  <script src="./social.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>

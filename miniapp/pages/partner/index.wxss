@@ -1,0 +1,1 @@
+.small{flex:1;font-size:25rpx}.text{height:140rpx;box-sizing:border-box}.message{border-radius:15rpx;background:#f3f0fe;padding:20rpx;margin:12rpx 0}
