@@ -1,0 +1,38 @@
+{
+  "targets": [
+    {
+      "id": "word-a",
+      "label": "匿名词卡A"
+    },
+    {
+      "id": "word-b",
+      "label": "匿名词卡B"
+    }
+  ],
+  "attempts": [
+    {
+      "target_id": "word-a",
+      "session_index": 1,
+      "outcome": "correct_unassisted",
+      "session_date": "2026-11-16"
+    },
+    {
+      "target_id": "word-a",
+      "session_index": 2,
+      "outcome": "correct_unassisted",
+      "session_date": "2026-11-16"
+    },
+    {
+      "target_id": "word-b",
+      "session_index": 1,
+      "outcome": "correct_with_cue",
+      "session_date": "2026-11-15"
+    },
+    {
+      "target_id": "word-b",
+      "session_index": 2,
+      "outcome": "correct_unassisted",
+      "session_date": "2026-11-17"
+    }
+  ]
+}
