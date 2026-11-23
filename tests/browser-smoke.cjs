@@ -70,7 +70,7 @@ const URL='http://127.0.0.1:8765/';
     await b.locator('#socialReply [type="submit"]').click();
     await b.locator('.social-reply').first().waitFor();
     assert.ok((await b.locator('.social-reply').count())>=1);
-    await a.locator('[data-social="screen"][data-screen="feed"]').click();
+    await a.locator('.social-detail-head [data-social="screen"][data-screen="feed"]').click();
     await a.locator('.social-post-title').filter({hasText:'英语词义记不住·自动化'}).first().click();
     await a.locator('.social-reply [data-social="best"]').first().click();
     assert.ok((await a.locator('.social-best').count())>=1,'Owner best-pick is not visible');
