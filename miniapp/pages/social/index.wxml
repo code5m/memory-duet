@@ -16,6 +16,7 @@
     <scroll-view scroll-x class="social-tabs" enhanced="true">
       <view class="tab {{screen==='feed'?'active':''}}" data-screen="feed" bindtap="switchScreen">广场</view>
       <view class="tab {{screen==='matches'?'active':''}}" data-screen="matches" bindtap="switchScreen">找搭子</view>
+      <view class="tab" data-screen="rooms" bindtap="switchScreen">共学室</view>
       <view class="tab {{screen==='challenges'?'active':''}}" data-screen="challenges" bindtap="switchScreen">挑战</view>
       <view class="tab {{screen==='leaders'?'active':''}}" data-screen="leaders" bindtap="switchScreen">贡献榜</view>
       <view class="tab {{screen==='inbox'?'active':''}}" data-screen="inbox" bindtap="switchScreen">私信</view>
@@ -67,7 +68,7 @@
       <view class="title">根据兴趣找搭子</view>
       <view wx:for="{{matches}}" wx:key="id" class="card"><view class="row"><view class="card-title" data-id="{{item.id}}" bindtap="openPartner">{{item.nickname}}</view>
         <text class="link" data-id="{{item.id}}" catchtap="toggleFollow">{{item.followed?'取消关注':'＋ 关注'}}</text></view>
-        <view class="sub">{{item.posts}} 个瓶子 · 共同兴趣 {{item.common_interests.join(' / ')}}</view>
+        <view class="sub">{{item.posts}} 个瓶子 · 共同兴趣 {{item.commonText}}</view>
         <text wx:if="{{item.mutual}}" class="link" data-id="{{item.id}}" bindtap="openPartner">互相关注 · 发私信 ↗</text></view>
       <view wx:if="{{!matches.length}}" class="empty">暂时没有匹配的搭子。</view>
     </view>
@@ -75,7 +76,7 @@
       <view class="title">结伴记忆挑战</view>
       <view wx:for="{{challenges}}" wx:key="id" class="card">
         <view class="card-title">{{item.title}}</view><view class="sub">{{item.description}}</view>
-        <view class="row"><text class="sub">{{item.joined}} 人参与</text>
+        <view class="row"><text class="sub">{{item.participants}} 人参与</text>
           <text class="link" data-id="{{item.id}}" data-action="{{item.joined?'complete':'join'}}" bindtap="challengeAction">
           {{item.completed?'✓ 已自报完成':item.joined?'打卡完成':'加入挑战'}}</text></view></view>
       <view class="sub">挑战完成为自报，不代表已通过独立回忆测验。</view>

@@ -6,6 +6,8 @@
     "pages/social/index",
     "pages/bottle/index",
     "pages/partner/index",
+    "pages/rooms/index",
+    "pages/room/index",
     "pages/profile/index"
   ],
   "window": {

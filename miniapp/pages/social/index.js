@@ -20,7 +20,7 @@ Page({
         const url=(s==='saved'?'/saved':'/feed')+'?kind='+this.data.kind+'&search='+encodeURIComponent(this.data.search);
         r=await api.call(url);
         this.setData({feed:(r.items||[]).map(x=>({...x,kindText:x.kind==='hard'?'太难记漂流瓶':'记忆秘诀瓶'}))});
-      }else if(s==='matches'){r=await api.call('/matches');this.setData({matches:r.users||[]});}
+      }else if(s==='matches'){r=await api.call('/matches');this.setData({matches:(r.users||[]).map(x=>({...x,commonText:(x.common_interests||[]).join(' / ')}))});}
       else if(s==='challenges'){r=await api.call('/challenges');this.setData({challenges:r.items||[]});}
       else if(s==='leaders'){r=await api.call('/leaderboard');this.setData({leaders:r.users||[]});}
       else if(s==='inbox'){r=await api.call('/inbox');this.setData({inbox:r.users||[]});}
@@ -28,10 +28,13 @@ Page({
     finally{this.setData({loading:false});}
   },
   requireGuest(){if(this.data.guest)return true;this.setData({screen:'guest'});wx.showToast({title:'随便起昵称即可进入',icon:'none'});return false;},
-  switchScreen(e){const screen=e.currentTarget.dataset.screen;if(['compose','matches','challenges','inbox','saved'].includes(screen)&&!this.requireGuest())return;
-    this.setData({screen});this.loadScreen();},
+  switchScreen(e){const screen=e.currentTarget.dataset.screen;
+    if(screen==="rooms"){wx.navigateTo({url:"/pages/rooms/index"});return;}if(['compose','matches','challenges','inbox','saved'].includes(screen)&&!this.requireGuest())return;
+    this.setData({screen,nickname:screen==='profile'&&this.data.guest?this.data.guest.nickname:this.data.nickname,
+      interests:screen==='profile'&&this.data.guest?this.data.guest.interests.join(', '):this.data.interests});this.loadScreen();},
   selectKind(e){this.setData({kind:e.currentTarget.dataset.kind,screen:'feed'});this.loadScreen();},
   selectPostKind(e){this.setData({postKind:e.currentTarget.dataset.kind});},
+  subjectChange(e){this.setData({subject:SUBJECTS[Number(e.detail.value)]||'英语'});},
   field(e){this.setData({[e.currentTarget.dataset.key]:e.detail.value});},
   async guestSubmit(e){
     const nick=(this.data.nickname||'').trim();

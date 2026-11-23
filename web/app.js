@@ -34,7 +34,9 @@
   }
   function toast(msg){var n=document.getElementById('toast');n.textContent=msg;n.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(function(){n.hidden=true;},3600);}
   function allDimensions(){return C.DIMENSIONS.concat(state.customDimensions||[]);}
-  var originalFacetValue=C.facetValue;
+  var originalFacetValue=C.facetValue,originalFacetOptions=C.facetOptions;
+  C.facetOptions=function(lessons,key,context){if(!key.startsWith('custom:'))return originalFacetOptions(lessons,key,context);
+    return [...new Set(lessons.map(x=>(x.customFacets||{})[key]||'未分类'))].sort((a,b)=>a.localeCompare(b,'zh-CN'));};
   C.facetValue=function(x,key,context){return key.startsWith('custom:')?((x.customFacets||{})[key]||'未分类'):originalFacetValue(x,key,context);};
   function allLessons(){return C.LESSONS.concat(state.custom||[]);}
   function one(id){return allLessons().find(function(x){return x.id===id;});}
@@ -100,7 +102,7 @@
       '<div class="topic-grid">'+topics.map(topicCard).join('')+'</div>'+
       section('你可以从这里开始','START SMALL, REMEMBER MORE','catalog')+
       '<div class="lesson-grid">'+lessons.map(lessonCard).join('')+'</div>'+
-      '<div class="prose-card" style="margin-top:26px"><b>学习建议</b><p>先理解知识，再选择一个主记忆方法。独立答题前不要看答案；提示后答对和独立答对会分开记录。</p>'+
+      '<div class="prose-card" style="margin-top:26px"><div class="page-header-row"><b>学习建议</b>'+button('去复习练习 ↗','goto-review','','btn-secondary')+'</div><p>先理解知识，再选择一个主记忆方法。独立答题前不要看答案；提示后答对和独立答对会分开记录。</p>'+
       '<p class="quiet">当前已记录 '+stat.attempts+' 次本机答题。数据仅保存在本浏览器，暂未接入账号同步。</p></div>';
   }
   function head(label,title,description){
@@ -263,7 +265,7 @@
         '<div class="empty-state"><span class="empty-icon">♡</span><h3>还没有收藏的卡片</h3><p>遇到喜欢的记法，点开学习卡并选择收藏。</p>'+button('发现学习卡','goto-catalog','','btn-primary')+'</div>')+
       section('下一步：记忆宫殿','COMING LATER')+
       '<div class="prose-card"><b>记忆宫殿还在规划中</b><p>未来先请你确认熟悉路线、地点桩顺序与数量，再安放真正需要记忆的知识；不会随意给你虚构“已掌握”的记忆效果。</p></div>'+
-      '<div class="section-top"><h2>我的数据</h2></div><div class="prose-card"><p>学习记录、收藏、创作和漂流瓶目前均存储在本浏览器。清理浏览器数据可能使它们消失。</p>'+
+      '<div class="section-top"><h2>我的数据</h2>'+button('进入复习空间 ↗','goto-review','','btn-primary')+'</div><div class="prose-card"><p>学习记录、收藏、创作和漂流瓶目前均存储在本浏览器。清理浏览器数据可能使它们消失。</p>'+
       '<div style="margin-top:13px">'+button('导出本机学习数据','export-data')+'</div></div>';
   }
   function rail(){
@@ -316,6 +318,7 @@
     if(!el)return;
     var action=el.dataset.action,id=el.dataset.id;
     if(action==='goto-catalog')setView('catalog');
+    else if(action==='goto-review')setView('review');
     else if(action==='goto-topics')setView('topics');
     else if(action==='open-topic')setView('topic',{topicId:id});
     else if(action==='open-lesson')setView('lesson',{lessonId:id});

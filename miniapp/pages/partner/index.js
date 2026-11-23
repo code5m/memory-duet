@@ -5,7 +5,7 @@ Page({
   async load(){
     if(!this.id)return;
     try{const [u,m]=await Promise.all([api.call('/users/'+encodeURIComponent(this.id)),api.call('/me')]);
-      this.setData({user:u.user,guest:m.guest,error:''});
+      this.setData({user:u.user,guest:m.guest,interestsText:(u.user.interests||[]).join(' · '),error:''});
       if(u.user.mutual){
         const r=await api.call('/messages?peer='+encodeURIComponent(this.id));
         this.setData({messages:r.items||[]});

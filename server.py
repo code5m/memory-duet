@@ -95,6 +95,21 @@ def initialize():
             CREATE TABLE IF NOT EXISTS challenges(
               id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT NOT NULL, category TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS study_rooms(
+              id TEXT PRIMARY KEY, creator TEXT NOT NULL REFERENCES guests(id),
+              title TEXT NOT NULL, subject TEXT NOT NULL, question TEXT NOT NULL,
+              hint TEXT NOT NULL, answer TEXT NOT NULL, created_at TEXT NOT NULL,
+              status TEXT NOT NULL DEFAULT 'visible'
+            );
+            CREATE TABLE IF NOT EXISTS room_members(
+              room_id TEXT NOT NULL REFERENCES study_rooms(id), guest_id TEXT NOT NULL REFERENCES guests(id),
+              joined_at TEXT NOT NULL, PRIMARY KEY(room_id,guest_id)
+            );
+            CREATE TABLE IF NOT EXISTS room_attempts(
+              room_id TEXT NOT NULL REFERENCES study_rooms(id), guest_id TEXT NOT NULL REFERENCES guests(id),
+              answer TEXT NOT NULL, outcome TEXT NOT NULL, submitted_at TEXT NOT NULL,
+              PRIMARY KEY(room_id,guest_id)
+            );
             CREATE TABLE IF NOT EXISTS challenge_entries(
               guest_id TEXT NOT NULL REFERENCES guests(id), challenge_id TEXT NOT NULL REFERENCES challenges(id),
               joined_at TEXT NOT NULL, completed_at TEXT,
@@ -113,6 +128,7 @@ def initialize():
             CREATE INDEX IF NOT EXISTS idx_bottles_feed ON bottles(status,kind,created_at);
             CREATE INDEX IF NOT EXISTS idx_reply_bottle ON replies(bottle_id,created_at);
             CREATE INDEX IF NOT EXISTS idx_message_pair ON messages(sender,receiver,created_at);
+            CREATE INDEX IF NOT EXISTS idx_rooms_status ON study_rooms(status,created_at);
         """)
         for ident, title, desc, category in [
             ("c-daily","七日无提示回忆","每天选择一道知识点，先遮住提示再回答。打卡为自报完成，不代表已掌握。","回忆"),
@@ -154,6 +170,10 @@ def image_data_url(s):
     if len(raw)>500_000 or not valid:
         raise ValueError("图片格式或大小不合法")
     return s
+
+def normalized_recall(text):
+    return re.sub(r"[\s。！!，,、.]","",str(text)).casefold()
+
 
 def rate_ok(key, maximum, period=60):
     with LIMIT_LOCK:
@@ -355,6 +375,34 @@ class Handler(BaseHTTPRequestHandler):
                 profiles.sort(key=lambda p:(len(p["common_interests"]),p["followers"],p["posts"]),reverse=True)
                 self.respond(200,{"ok":True,"users":profiles[:20]})
                 return
+            if path=="/api/community/rooms":
+                rows=db.execute("""SELECT r.id,r.creator,r.title,r.subject,r.question,r.created_at,
+                    (SELECT COUNT(*) FROM room_members m WHERE m.room_id=r.id) AS members,
+                    (SELECT COUNT(*) FROM room_attempts a WHERE a.room_id=r.id) AS attempts
+                    FROM study_rooms r WHERE r.status='visible' ORDER BY r.created_at DESC LIMIT 60""").fetchall()
+                result=[]
+                for row in rows:
+                    item=dict(row)
+                    owner=db.execute("SELECT nickname FROM guests WHERE id=?",(item["creator"],)).fetchone()
+                    item["creator_name"]=owner["nickname"]
+                    result.append(item)
+                self.respond(200,{"ok":True,"items":result,"note":"学习室结果只能证明服务端核对了输入；提示使用仍由客户端申报。"})
+                return
+            if path.startswith("/api/community/rooms/"):
+                ident=path.rsplit("/",1)[-1]
+                room=db.execute("SELECT * FROM study_rooms WHERE id=? AND status='visible'",(ident,)).fetchone()
+                if not room:self.error_json(404,"共学室不存在");return
+                item={k:room[k] for k in ("id","title","subject","question","hint","creator","created_at")}
+                item["members"]=[dict(r) for r in db.execute("""SELECT g.id,g.nickname,a.outcome,a.submitted_at
+                    FROM room_members m JOIN guests g ON g.id=m.guest_id
+                    LEFT JOIN room_attempts a ON a.room_id=m.room_id AND a.guest_id=m.guest_id
+                    WHERE m.room_id=? ORDER BY m.joined_at""",(ident,))]
+                attempt=db.execute("SELECT * FROM room_attempts WHERE room_id=? AND guest_id=?",
+                                    (ident,uid)).fetchone() if uid else None
+                item["my_attempt"]={k:attempt[k] for k in ("answer","outcome","submitted_at")} if attempt else None
+                if attempt:item["reference_answer"]=room["answer"]
+                self.respond(200,{"ok":True,"room":item})
+                return
             if path=="/api/community/leaderboard":
                 rows=db.execute("""SELECT g.id,g.nickname,COUNT(DISTINCT b.id) AS posts,
                         (SELECT COUNT(*) FROM replies r WHERE r.guest_id=g.id AND r.status='visible') AS replies
@@ -363,7 +411,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.respond(200,{"ok":True,"users":[dict(row) for row in rows],"metric":"公开贡献数量（非学习能力）"})
                 return
             if path=="/api/community/challenges":
-                rows=db.execute("""SELECT c.*, (SELECT COUNT(*) FROM challenge_entries e WHERE e.challenge_id=c.id) AS joined
+                rows=db.execute("""SELECT c.*, (SELECT COUNT(*) FROM challenge_entries e WHERE e.challenge_id=c.id) AS participants
                     FROM challenges c""").fetchall()
                 joined=set()
                 completed=set()
@@ -432,9 +480,9 @@ class Handler(BaseHTTPRequestHandler):
                     target=clean(payload.get("type"),"类型",10)
                     ident=clean(payload.get("id"),"记录 ID",60)
                     action=clean(payload.get("action"),"操作",20)
-                    if target not in ("bottle","reply") or action not in ("visible","hidden"):
+                    if target not in ("bottle","reply","room") or action not in ("visible","hidden"):
                         raise ValueError("审核操作不合法")
-                    table="bottles" if target=="bottle" else "replies"
+                    table={"bottle":"bottles","reply":"replies","room":"study_rooms"}[target]
                     if not db.execute(f"SELECT 1 FROM {table} WHERE id=?",(ident,)).fetchone():
                         self.error_json(404,"记录不存在");return
                     db.execute(f"UPDATE {table} SET status=? WHERE id=?",(action,ident))
@@ -464,6 +512,50 @@ class Handler(BaseHTTPRequestHandler):
                         VALUES(?,?,?,?,?,?,?,?,?,?)""",(ident,uid,kind,title,content,subject,method,
                         json.dumps(tags,ensure_ascii=False),photo,now()))
                     self.respond(201,{"ok":True,"id":ident});return
+                if path=="/api/community/rooms":
+                    title=clean(payload.get("title"),"共学标题",90)
+                    subject=clean(payload.get("subject","记忆训练"),"学科",40)
+                    question=clean(payload.get("question"),"无提示问题",500)
+                    hint=clean(payload.get("hint"),"学习提示",1000)
+                    answer=clean(payload.get("answer"),"参考答案",250)
+                    if len(normalized_recall(answer))>=3 and normalized_recall(answer) in normalized_recall(question):
+                        raise ValueError("无提示题目不能直接泄露参考答案")
+                    room_id=uuid.uuid4().hex
+                    db.execute("""INSERT INTO study_rooms(id,creator,title,subject,question,hint,answer,created_at)
+                        VALUES(?,?,?,?,?,?,?,?)""",(room_id,uid,title,subject,question,hint,answer,now()))
+                    db.execute("INSERT INTO room_members(room_id,guest_id,joined_at) VALUES(?,?,?)",(room_id,uid,now()))
+                    self.respond(201,{"ok":True,"id":room_id})
+                    return
+                if path=="/api/community/rooms/join":
+                    room_id=clean(payload.get("id"),"共学室 ID",60)
+                    room=db.execute("SELECT 1 FROM study_rooms WHERE id=? AND status='visible'",(room_id,)).fetchone()
+                    if not room:self.error_json(404,"共学室不存在");return
+                    exists=db.execute("SELECT 1 FROM room_members WHERE room_id=? AND guest_id=?",(room_id,uid)).fetchone()
+                    count=db.execute("SELECT COUNT(*) FROM room_members WHERE room_id=?",(room_id,)).fetchone()[0]
+                    if not exists and count>=8:self.error_json(409,"共学室最多 8 人");return
+                    db.execute("INSERT OR IGNORE INTO room_members(room_id,guest_id,joined_at) VALUES(?,?,?)",
+                               (room_id,uid,now()))
+                    self.respond(200,{"ok":True})
+                    return
+                if path=="/api/community/rooms/submit":
+                    room_id=clean(payload.get("id"),"共学室 ID",60)
+                    entered=clean(payload.get("answer"),"回忆答案",500)
+                    prompted=payload.get("hint_used")
+                    if not isinstance(prompted,bool):
+                        raise ValueError("请明确提交是否查看过提示")
+                    room=db.execute("SELECT answer FROM study_rooms WHERE id=? AND status='visible'",(room_id,)).fetchone()
+                    if not room:self.error_json(404,"共学室不存在");return
+                    if not db.execute("SELECT 1 FROM room_members WHERE room_id=? AND guest_id=?",(room_id,uid)).fetchone():
+                        self.error_json(403,"请先加入共学室");return
+                    previous=db.execute("SELECT 1 FROM room_attempts WHERE room_id=? AND guest_id=?",(room_id,uid)).fetchone()
+                    if previous:self.error_json(409,"本轮已作答；如需再练，请开启另一轮共学。");return
+                    correct=normalized_recall(entered)==normalized_recall(room["answer"])
+                    outcome=("prompted-correct" if prompted else "independent-correct") if correct else "incorrect"
+                    db.execute("INSERT INTO room_attempts(room_id,guest_id,answer,outcome,submitted_at) VALUES(?,?,?,?,?)",
+                               (room_id,uid,entered,outcome,now()))
+                    self.respond(200,{"ok":True,"outcome":outcome,"reference_answer":room["answer"],
+                                      "note":"核对为精确文本匹配；是否看提示由参与者自报，不能作为经监管的成绩。"})
+                    return
                 if path=="/api/community/replies":
                     bottle_id=clean(payload.get("bottle_id"),"瓶子 ID",60)
                     row=db.execute("SELECT guest_id FROM bottles WHERE id=? AND status='visible'",(bottle_id,)).fetchone()
@@ -541,15 +633,15 @@ class Handler(BaseHTTPRequestHandler):
                     target=clean(payload.get("target_type"),"举报对象",12)
                     ident=clean(payload.get("target_id"),"举报对象 ID",60)
                     reason=clean(payload.get("reason"),"原因",220)
-                    if target not in ("bottle","reply","user"):raise ValueError("不支持的举报对象")
-                    table={"bottle":"bottles","reply":"replies","user":"guests"}[target]
+                    if target not in ("bottle","reply","user","room"):raise ValueError("不支持的举报对象")
+                    table={"bottle":"bottles","reply":"replies","user":"guests","room":"study_rooms"}[target]
                     if not db.execute(f"SELECT 1 FROM {table} WHERE id=?",(ident,)).fetchone():
                         self.error_json(404,"举报对象不存在");return
                     db.execute("INSERT OR IGNORE INTO reports(id,reporter,target_type,target_id,reason,created_at) VALUES(?,?,?,?,?,?)",
                                (uuid.uuid4().hex,uid,target,ident,reason,now()))
                     count=db.execute("SELECT COUNT(*) FROM reports WHERE target_type=? AND target_id=?",(target,ident)).fetchone()[0]
-                    if count>=3 and target in ("bottle","reply"):
-                        table="bottles" if target=="bottle" else "replies"
+                    if count>=3 and target in ("bottle","reply","room"):
+                        table={"bottle":"bottles","reply":"replies","room":"study_rooms"}[target]
                         db.execute(f"UPDATE {table} SET status='hidden' WHERE id=?",(ident,))
                     self.respond(200,{"ok":True,"note":"举报已记录；达到阈值的内容会临时隐藏，仍需人工审核。"});return
                 self.error_json(404,"操作不存在")

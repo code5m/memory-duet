@@ -1,0 +1,14 @@
+services:
+  memory-duet:
+    build: .
+    ports:
+      - "127.0.0.1:8765:8765"
+    environment:
+      MEMORY_DUET_HOST: 0.0.0.0
+      MEMORY_DUET_PORT: 8765
+      MEMORY_DUET_ADMIN_TOKEN: ${MEMORY_DUET_ADMIN_TOKEN:?Set a strong admin token in .env}
+    volumes:
+      - duet-data:/app/data
+    restart: unless-stopped
+volumes:
+  duet-data:

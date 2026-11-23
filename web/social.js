@@ -6,7 +6,7 @@
   let token=localStorage.getItem(TOKEN_KEY)||"";
   let me=null,root=null,booted=false,requestId=0;
   let screen="feed",kind="all",sort="new",query="",feed=[],selected=null,replies=[],user=null,
-      matches=[],challenges=[],leaders=[],inbox=[],messages=[],peer=null,subscreen="",draftKind="hard";
+      matches=[],challenges=[],leaders=[],inbox=[],messages=[],peer=null,rooms=[],room=null,roomHintUsed=false,subscreen="",draftKind="hard";
   const labels={hard:"太难记漂流瓶",secret:"记忆秘诀瓶"};
   const icons={hard:"◌",secret:"✦"};
   const stateName={hard:"分享你的难题，让搭子来支招",secret:"把真正有效的记忆方法传递出去"};
@@ -78,7 +78,7 @@
     return false;
   }
   function navbar(){
-    const menu=[["feed","漂流瓶广场"],["matches","找搭子"],["challenges","结伴挑战"],["leaderboard","贡献榜"],["inbox","私信"],["saved","我的收藏"]];
+    const menu=[["feed","漂流瓶广场"],["matches","找搭子"],["challenges","结伴挑战"],["rooms","共学练习室"],["leaderboard","贡献榜"],["inbox","私信"],["saved","我的收藏"]];
     return '<div class="social-toolbar"><div class="social-user">'+(me?
       '<span class="social-avatar">✦</span><span>游客 <strong>'+esc(me.nickname)+'</strong><small>免密码 · 临时身份</small></span>'+
       '<button class="social-quiet" data-social="profile">个人设置</button>':
@@ -206,11 +206,57 @@
       (currentId()!==user.id?button("举报游客","report",'data-type="user" data-id="'+attr(user.id)+'"'):"")+'</div></div>'+
       '<p class="social-disclaimer">昵称可能重复，游客身份未经过实名认证；不要向陌生人发送敏感信息。</p>';
   }
+  function roomsView(){
+    return '<div class="social-heading"><h2>一起完成记忆练习</h2><span class="social-hint">最多 8 位游客协作试记</span></div>'+
+      '<div class="social-panel"><p>每个共学室有一道参考答案题。先看学习提示，再遮住提示独立答题；服务端负责文本核对。查看提示由参与者自报。</p>'+
+      button('＋ 创建共学练习室','room-create','','btn-primary')+'</div>'+
+      (rooms.length?'<div class="social-feed">'+rooms.map(r=>
+      '<article class="social-post"><span class="social-type type-secret">'+esc(r.subject)+'</span>'+
+      '<h3>'+esc(r.title)+'</h3><p>'+esc(r.question)+'</p>'+
+      '<div class="social-post-foot"><span>'+esc(r.creator_name)+' · '+r.members+' 位参与</span>'+
+      button('进入共学','room','data-id="'+attr(r.id)+'"','social-small-primary')+'</div></article>').join('')+'</div>':
+      '<div class="social-empty">暂时还没有共学室，创建第一道互助练习。</div>');
+  }
+  function roomComposeView(){
+    return '<section class="social-panel"><span class="eyebrow">LEARN WITH FRIENDS</span><h2>创建一个共学练习室</h2>'+
+      '<p>不能在题干里直接泄露答案。参考答案只会在参与者提交回答后显示。</p>'+
+      '<form id="socialRoomCreate" class="social-form">'+
+      '<label>练习室标题<input class="form-control" name="title" required maxlength="90" placeholder="例如：借入借出词义挑战"></label>'+
+      '<label>学习领域<select class="form-control" name="subject">'+SUBJECTS.map(v=>'<option>'+esc(v)+'</option>').join("")+'</select></label>'+
+      '<label>独立回忆问题<textarea class="form-control" name="question" rows="3" required maxlength="500" placeholder="遮住提示后，参与者需要回答什么？"></textarea></label>'+
+      '<label>可选看的一段学习线索<textarea class="form-control" name="hint" rows="4" required maxlength="1000" placeholder="清晰解释知识，但先不提供在题干中"></textarea></label>'+
+      '<label>参考答案<input class="form-control" name="answer" required maxlength="250" placeholder="例如 lend"></label>'+
+      '<button class="btn-primary" type="submit">创建练习室 ↗</button></form></section>';
+  }
+  function roomView(){
+    if(!room)return '<div class="social-empty">找不到练习室。</div>';
+    const joined=me&&(room.members||[]).some(m=>m.id===me.id),attempt=room.my_attempt;
+    return '<div class="social-detail-head">'+button('← 返回共学列表','screen','data-screen="rooms"','social-quiet')+
+      '<span class="detail-pill">'+esc(room.subject)+'</span></div>'+
+      '<div class="social-panel"><span class="eyebrow">GROUP ACTIVE RECALL</span><h2>'+esc(room.title)+'</h2>'+
+      '<p>题目由游客 '+esc((room.members.find(m=>m.id===room.creator)||{}).nickname||'搭子')+' 提供。最多 8 人参与。</p>'+
+      '<div class="quiz-question">'+esc(room.question)+'</div>'+
+      (attempt?'<div class="answer-box"><strong>'+({ 'independent-correct':'独立答对', 'prompted-correct':'提示后答对',
+        'incorrect':'未答对'}[attempt.outcome]||'已作答')+'</strong>'+
+        '<div class="answer-text">参考答案：'+esc(room.reference_answer)+'</div>'+
+        '<p>你提交的答案：'+esc(attempt.answer)+'</p></div>':
+      joined?'<form id="socialRoomAnswer"><label>独立写出答案</label><input class="form-control" name="answer" required maxlength="500" autocomplete="off" placeholder="不用看参考答案，自己回答">'+
+        (roomHintUsed?'<div class="hint-box"><b>已看提示，本次正确也只计为提示后答对</b><p>'+esc(room.hint)+'</p></div>':'')+
+        '<div class="social-detail-actions">'+(!roomHintUsed?button('需要一个提示','room-hint'):'')+
+        '<button class="btn-primary" type="submit">提交答案并核对</button></div></form>':
+      '<p>加入共学室后可以看到提示、参加独立答题。</p>'+button('加入这间共学室','room-join','','btn-primary'))+
+      '<div class="social-heading"><h3>一起学习的搭子</h3><small>'+room.members.length+' / 8</small></div>'+
+      (room.members||[]).map(m=>'<div class="social-leader">'+userButton(m)+
+        '<small>'+esc(m.outcome==='independent-correct'?'无提示正确':m.outcome==='prompted-correct'?'提示后正确':
+        m.outcome==='incorrect'?'本轮未答对':'尚未作答')+'</small></div>').join('')+
+      '<div style="margin-top:17px">'+button('举报共学内容','report','data-type="room" data-id="'+attr(room.id)+'"','social-quiet')+'</div>'+
+      '<p class="social-disclaimer">这里只能核对提交的文本；是否使用了外部辅助由参与者自报，不是防作弊考试。</p></div>';
+  }
   function challengesView(){
     return '<div class="social-heading"><h2>结伴记忆挑战</h2><span class="social-hint">打卡由学习者自报</span></div>'+
       '<div class="social-challenge-grid">'+challenges.map(c=>'<div class="social-challenge">'+
       '<span class="social-type type-secret">'+esc(c.category)+'</span><h3>'+esc(c.title)+'</h3>'+
-      '<p>'+esc(c.description)+'</p><div class="social-challenge-bottom"><small>'+c.joined+' 位参与</small>'+
+      '<p>'+esc(c.description)+'</p><div class="social-challenge-bottom"><small>'+c.participants+' 位参与</small>'+
       button(c.completed?"✓ 已自报完成":c.joined?"自报已完成":"加入挑战","challenge",
       'data-id="'+attr(c.id)+'" data-state="'+(c.joined?"complete":"join")+'"',
       c.completed?"social-action":"social-small-primary")+'</div></div>').join("")+'</div>'+
@@ -249,7 +295,7 @@
   function render(){
     if(!root)return;
     const screens={feed:feedView,entry:entryView,compose:composeView,detail:detailView,profile:profileView,
-      matches:matchesView,user:userView,challenges:challengesView,leaderboard:leaderboardView,
+      matches:matchesView,user:userView,challenges:challengesView,rooms:roomsView,room:roomView,roomCompose:roomComposeView,leaderboard:leaderboardView,
       inbox:inboxView,dm:dmView,report:reportView,saved:()=>'<div class="social-heading"><h2>收藏的记忆瓶</h2></div><div class="social-feed">'+(feed.length?feed.map(itemCard).join(""):'<div class="social-empty">暂时没有收藏的瓶子。</div>')+'</div>'};
     root.innerHTML=navbar()+'<div class="social-inner">'+(screens[screen]||feedView)()+'</div>';
   }
@@ -274,6 +320,10 @@
         d=await call("/matches");if(rid===requestId)matches=d.users;
       }else if(screen==="user"){
         d=await call("/users/"+encodeURIComponent(user.id));if(rid===requestId)user=d.user;
+      }else if(screen==="rooms"){
+        d=await call("/rooms");if(rid===requestId)rooms=d.items;
+      }else if(screen==="room"){
+        d=await call("/rooms/"+encodeURIComponent(room.id));if(rid===requestId)room=d.room;
       }else if(screen==="leaderboard"){
         d=await call("/leaderboard");if(rid===requestId)leaders=d.users;
       }else if(screen==="challenges"){
@@ -339,6 +389,10 @@
       if(!requireGuest())return;
       await doAction(()=>call("/best",{body:{reply_id:id}}));return;
     }
+    if(action==="room-create"){if(!requireGuest())return;screen="roomCompose";render();return;}
+    if(action==="room"){room={id:id};roomHintUsed=false;screen="room";await load();return;}
+    if(action==="room-hint"){roomHintUsed=true;render();return;}
+    if(action==="room-join"){if(!requireGuest())return;await doAction(()=>call("/rooms/join",{body:{id:room.id}}));return;}
     if(action==="challenge"){
       if(!requireGuest())return;
       if(b.dataset.state==="complete"&&!confirm("本次完成由你自行确认，不会自动判定记忆效果，确定打卡吗？"))return;
@@ -375,6 +429,14 @@
         const data=await call("/bottles",{body:payload});selected={id:data.id};screen="detail";
         notify("你的记忆瓶已经入海");
       });return;
+    }
+    if(form.id==="socialRoomCreate"){
+      await doAction(async()=>{const d=await call("/rooms",{body:{title:f.get("title"),subject:f.get("subject"),question:f.get("question"),
+        hint:f.get("hint"),answer:f.get("answer")}});room={id:d.id};roomHintUsed=false;screen="room";notify("共学室已创建，邀请搭子参与");});return;
+    }
+    if(form.id==="socialRoomAnswer"){
+      await doAction(async()=>{const d=await call("/rooms/submit",{body:{id:room.id,answer:f.get("answer"),hint_used:roomHintUsed}});
+        notify(d.outcome==="independent-correct"?"恭喜独立答对":d.outcome==="prompted-correct"?"提示后答对已单独记录":"已核对答案，可以和搭子交流");});return;
     }
     if(form.id==="socialReply"){
       await doAction(async()=>{

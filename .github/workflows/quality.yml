@@ -1,0 +1,34 @@
+name: memory-duet-quality
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax checks
+        run: |
+          node --check web/app.js
+          node --check web/social.js
+          node --check web/data/catalog.js
+          node --check web/data/expansion.js
+          node --check miniapp/pages/social/index.js
+          node --check miniapp/pages/catalog/index.js
+          node --check miniapp/pages/lesson/index.js
+          python -m compileall -q server.py tests
+      - name: Learning model tests
+        run: |
+          node tests/catalog.test.js
+          node tests/extended_catalog.test.js
+      - name: Guest community HTTP integration tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v

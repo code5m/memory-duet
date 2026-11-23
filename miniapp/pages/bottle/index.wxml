@@ -17,7 +17,7 @@
     <view class="body">{{item.content}}</view><view class="sub">{{item.method}}</view>
     <view class="row"><text class="link" data-type="reply" data-id="{{item.id}}" data-kind="like" bindtap="reaction">♡ 点赞</text>
       <text wx:if="{{guest.id===item.author.id}}" class="sub">我的回信</text>
-      <text wx:if="{{guest&&guest.id===item.guest_id}}" class="link" data-id="{{item.id}}" bindtap="best">精选</text>
+      <text wx:if="{{isOwner&&!item.is_best}}" class="link" data-id="{{item.id}}" bindtap="best">精选</text>
       <text class="link" data-type="reply" data-id="{{item.id}}" bindtap="report">举报</text></view>
   </view>
   <view class="card"><view class="card-title">分享一个更好记的办法</view>

@@ -2,7 +2,7 @@
   <view wx:if="{{error}}" class="sub">{{error}}</view>
   <view class="label">MEMORY PARTNER</view><view class="title">{{user.nickname}}</view>
   <view class="card"><view class="sub">{{user.posts}} 只漂流瓶 · {{user.followers}} 个关注</view>
-    <view class="sub">{{user.interests.join(' · ')}}</view>
+    <view class="sub">{{interestsText}}</view>
     <view class="row"><button class="button small" bindtap="follow">{{user.followed?'取消关注':'＋ 关注'}}</button>
       <button class="small" bindtap="block">屏蔽</button></view>
   </view>

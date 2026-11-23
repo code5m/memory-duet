@@ -1,13 +1,13 @@
 const api=require('../../utils/community.js');
 Page({
-  data:{item:null,replies:[],error:'',text:'',method:'',guest:null},
+  data:{item:null,replies:[],error:'',text:'',method:'',guest:null,isOwner:false},
   onLoad(o){this.id=o.id||'';this.load();},
   onShow(){this.load();},
   async load(){
     if(!this.id)return;
     try{const [d,m]=await Promise.all([api.call('/bottles/'+encodeURIComponent(this.id)),api.call('/me')]);
       this.setData({item:{...d.item,kindText:d.item.kind==='hard'?'太难记漂流瓶':'记忆秘诀瓶'},
-        replies:d.replies||[],guest:m.guest,error:''});
+        replies:d.replies||[],guest:m.guest,isOwner:!!(m.guest&&m.guest.id===d.item.author.id),error:''});
       wx.setNavigationBarTitle({title:d.item.title.slice(0,20)});
     }catch(e){this.setData({error:e.message});}
   },
