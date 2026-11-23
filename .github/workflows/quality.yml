@@ -32,3 +32,28 @@ jobs:
           node tests/extended_catalog.test.js
       - name: Guest community HTTP integration tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install browser harness
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start local app
+        run: |
+          python3 server.py > /tmp/duet-server.log 2>&1 &
+          for n in {1..20}; do
+            curl -fsS http://127.0.0.1:8765/api/config && break
+            sleep 1
+          done
+      - name: Responsive and guest-social browser checks
+        run: node tests/browser-smoke.cjs

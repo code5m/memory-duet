@@ -239,6 +239,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options","nosniff")
         self.send_header("Referrer-Policy","same-origin")
         self.send_header("X-Frame-Options","DENY")
+        self.send_header("Content-Security-Policy","default-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'")
         self.end_headers()
         self.wfile.write(data)
 
@@ -302,6 +303,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options","nosniff")
         self.send_header("Referrer-Policy","same-origin")
         self.send_header("X-Frame-Options","DENY")
+        self.send_header("Content-Security-Policy","default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'")
         self.end_headers()
         self.wfile.write(data)
 
@@ -653,6 +655,11 @@ class Handler(BaseHTTPRequestHandler):
             self.error_json(500,"数据库操作失败")
 
     def image_proxy(self):
+        if not rate_ok((self.client_address[0],"image-generate"),2):
+            self.error_json(429,"生图操作过于频繁");return
+        with LOCK,connect() as db:
+            if not get_user(db,self.authorization()):
+                self.error_json(401,"需先进入游客身份，才能请求生成图片");return
         key=os.getenv("RIRIXIN_API_KEY")
         endpoint=os.getenv("RIRIXIN_IMAGE_ENDPOINT")
         if not key or not endpoint:
