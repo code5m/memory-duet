@@ -1,0 +1,22 @@
+{
+  "content_type": "ordered",
+  "primary_id": "B01",
+  "support_id": null,
+  "targets": [
+    {"id": "a1", "answer": "人物"},
+    {"id": "a2", "answer": "时间"},
+    {"id": "a3", "answer": "地点"},
+    {"id": "a4", "answer": "事件"},
+    {"id": "a5", "answer": "原因或结果"}
+  ],
+  "cue_mappings": [
+    {"target_id": "a1", "cue": "主角大拇指", "decode_rule": "触碰拇指→提示人物", "decoded_answer": "人物", "position": "拇指"},
+    {"target_id": "a2", "cue": "食指指向钟表", "decode_rule": "触碰食指→提示时间", "decoded_answer": "时间", "position": "食指"},
+    {"target_id": "a3", "cue": "中指指向地图", "decode_rule": "触碰中指→提示地点", "decoded_answer": "地点", "position": "中指"},
+    {"target_id": "a4", "cue": "无名指翻动故事书", "decode_rule": "触碰无名指→提示事件", "decoded_answer": "事件", "position": "无名指"},
+    {"target_id": "a5", "cue": "小指点亮问号", "decode_rule": "触碰小指→提示原因或结果", "decoded_answer": "原因或结果", "position": "小指"}
+  ],
+  "assessment": [
+    {"id": "q1", "prompt": "不看手指提示，按固定顺序独立说出这五类故事信息。", "answer_ids": ["a1", "a2", "a3", "a4", "a5"], "exposes_answer": false}
+  ]
+}
