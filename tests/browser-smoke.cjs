@@ -73,6 +73,7 @@ const URL='http://127.0.0.1:8765/';
     await a.locator('.social-detail-head [data-social="screen"][data-screen="feed"]').click();
     await a.locator('.social-post-title').filter({hasText:'英语词义记不住·自动化'}).first().click();
     await a.locator('.social-reply [data-social="best"]').first().click();
+    await a.locator('.social-best').first().waitFor({state:'visible',timeout:10000});
     assert.ok((await a.locator('.social-best').count())>=1,'Owner best-pick is not visible');
 
     await ctxA.close();await ctxB.close();await desktop.close();
