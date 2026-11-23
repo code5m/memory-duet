@@ -1,0 +1,84 @@
+{
+  "content_type": "digits",
+  "primary_id": "C05",
+  "support_id": "L01",
+  "digit_sequence": "0057293016846205",
+  "segments": [
+    {
+      "start": 0,
+      "end": 6,
+      "decoded_digits": "005729",
+      "cue": "宇航员在门口弹钢琴，钢琴上挂着蓝色风筝",
+      "position": "门口",
+      "pao_parts": {
+        "person": "穿太空服的宇航员",
+        "action": "弹钢琴",
+        "object": "蓝色风筝"
+      }
+    },
+    {
+      "start": 6,
+      "end": 12,
+      "decoded_digits": "301684",
+      "cue": "海盗在桌旁举起巨大的金色闹钟",
+      "position": "桌旁",
+      "pao_parts": {
+        "person": "戴眼罩的海盗",
+        "action": "举起",
+        "object": "金色闹钟"
+      }
+    },
+    {
+      "start": 12,
+      "end": 16,
+      "decoded_digits": "6205",
+      "cue": "机器人在窗前喷出彩虹",
+      "position": "窗前",
+      "pao_parts": {
+        "person": "圆头机器人",
+        "action": "喷彩虹"
+      }
+    }
+  ],
+  "assessment": [
+    {
+      "id": "q1",
+      "prompt": "完全遮住编码和原数字，按原始顺序写出16位数字。",
+      "expected_digits": "0057293016846205",
+      "exposes_answer": false,
+      "mode": "numeric_recall"
+    }
+  ],
+  "pao_codebook": {
+    "00": {
+      "person": "穿太空服的宇航员"
+    },
+    "57": {
+      "action": "弹钢琴"
+    },
+    "29": {
+      "object": "蓝色风筝"
+    },
+    "30": {
+      "person": "戴眼罩的海盗"
+    },
+    "16": {
+      "action": "举起"
+    },
+    "84": {
+      "object": "金色闹钟"
+    },
+    "62": {
+      "person": "圆头机器人"
+    },
+    "05": {
+      "action": "喷彩虹"
+    }
+  },
+  "loci_sequence": [
+    "门口",
+    "桌旁",
+    "窗前"
+  ],
+  "route_familiar_confirmed": true
+}
