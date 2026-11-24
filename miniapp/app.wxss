@@ -1,0 +1,11 @@
+page{background:#f8f7f4;color:#222332;font:28rpx -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}.container{padding:32rpx}.hero{background:#ede9ff;border-radius:35rpx;padding:45rpx;margin-bottom:26rpx}.title{font-weight:800;font-size:45rpx;margin:14rpx 0}.sub{font-size:25rpx;color:#777487;line-height:1.7}.card{background:white;border-radius:25rpx;margin:16rpx 0;padding:25rpx}.button{background:#6754dc;color:white;border-radius:20rpx;font-size:27rpx;margin-top:22rpx}.control{border:1rpx solid #eae6f1;background:white;padding:20rpx;border-radius:14rpx;margin:15rpx 0}.label{font-size:24rpx;color:#6754dc}.hint{background:#f0ebff;padding:23rpx;border-radius:15rpx;margin:15rpx 0}
+.facet-tags{display:flex;flex-wrap:wrap;gap:13rpx;margin-top:15rpx}.filter-tag{background:#ece6ff;color:#5e49c6;padding:8rpx 16rpx;border-radius:28rpx;font-size:23rpx}.card-title{font-weight:750;font-size:30rpx}.label{font-size:24rpx;color:#6754dc;font-weight:750}
+
+.tab-page{padding-bottom:calc(145rpx + env(safe-area-inset-bottom))}
+.scene-grid{display:flex;gap:16rpx;flex-wrap:wrap;margin-bottom:25rpx}
+.scene-tile{flex:1;min-width:225rpx;background:#eeebff;color:#5444a6;border-radius:25rpx;padding:27rpx}
+.scene-tile.social{background:#e1f2ea;color:#266e60}.scene-tile .glyph{font-size:47rpx;display:block;margin-bottom:10rpx}
+.scene-tile .sub{font-size:22rpx}.scene-link{color:#6754dc;font-size:25rpx;font-weight:700;padding:12rpx}
+.scene-social .hero{background:#e1f2ea}.scene-social .button{background:#287c70}.scene-social .label,.scene-social .link{color:#287c70}
+.scene-social .tab.active{background:#e1f2ea;color:#287c70}.scene-social .kind-secret{background:#e1f2ea}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16rpx}.pill{background:#f1edff;color:#6754dc;border-radius:40rpx;padding:8rpx 15rpx;font-size:23rpx}

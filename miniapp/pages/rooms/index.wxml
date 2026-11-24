@@ -1,0 +1,23 @@
+<view class="container"><scene-switch/>
+  <view class="label">ACTIVE RECALL · LEARN TOGETHER</view>
+  <view class="title">记忆共学练习室</view>
+  <view class="sub">最多 8 人一起参加同一道回忆题；独立答对与提示后答对分开记录。</view>
+  <view wx:if="{{error}}" class="error">{{error}}</view>
+  <button class="button" bindtap="createToggle">{{compose?'取消创建':'＋ 发起共学练习'}}</button>
+  <view wx:if="{{compose}}" class="card">
+    <view class="card-title">创建一道共学题</view>
+    <input class="control" placeholder="练习室标题" maxlength="90" data-key="title" value="{{title}}" bindinput="field"/>
+    <input class="control" placeholder="学习领域，如英语、数学" maxlength="40" data-key="subject" value="{{subject}}" bindinput="field"/>
+    <textarea class="control textarea" placeholder="遮住提示后，需要独立回忆的问题" maxlength="500" data-key="question" value="{{question}}" bindinput="field"/>
+    <textarea class="control textarea" placeholder="学习提示" maxlength="1000" data-key="hint" value="{{hint}}" bindinput="field"/>
+    <input class="control" placeholder="参考答案（不要直接写在题干里）" maxlength="250" data-key="answer" value="{{answer}}" bindinput="field"/>
+    <button class="button" bindtap="createRoom">创建并加入</button>
+  </view>
+  <view wx:for="{{rooms}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="openRoom">
+    <view class="label">{{item.subject}}</view>
+    <view class="card-title">{{item.title}}</view><view class="sub">{{item.question}}</view>
+    <view class="row"><text class="sub">{{item.members}} 人参与 · {{item.attempts}} 人已回答</text>
+      <text class="label">进入 ↗</text></view>
+  </view>
+  <view wx:if="{{!rooms.length}}" class="empty">暂时没有共学室。</view>
+</view>

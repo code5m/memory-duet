@@ -1,0 +1,6 @@
+<view class="container tab-page"><scene-switch/><view class="label">ACTIVE RECALL · REVIEW</view><view class="title">我的复习工作台</view><view class="sub">根据本机真实练习记录推荐复测；提示后答对与独立正确分开计算。</view>
+  <view class="hero"><view class="title">{{due.length}} 张待巩固</view><view class="sub">{{attempts}} 次已记录练习</view></view>
+  <view wx:for="{{due}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="open"><view class="card-title">{{item.title}} ↗</view><view class="sub">{{item.subject}} · {{item.status}}</view></view>
+  <view wx:if="{{!due.length}}" class="card"><view class="sub">暂无待巩固内容。开始一轮学习，再用真实答题记录安排复习。</view><button class="button" bindtap="catalog">去分类学习</button></view>
+  <view wx:if="{{later.length}}" class="title">稍后再复测</view><view wx:for="{{later}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="open"><view class="card-title">{{item.title}}</view><view class="sub">{{item.status}}</view></view>
+</view>

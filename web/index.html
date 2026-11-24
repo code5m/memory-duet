@@ -1,65 +1,55 @@
-<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>记忆搭子 · 试记工作室</title><style>
-*{box-sizing:border-box}body{margin:auto;max-width:710px;background:#f3f5fa;color:#1c2335;font:16px/1.6 system-ui}main{padding:20px}header,nav,.row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}header{padding:15px 20px;border-bottom:1px solid #d5dbea}strong{font-size:22px}small{color:#58657a}button,input,textarea,select{font:inherit;border:1px solid #ccd3e2;border-radius:12px;background:white;padding:10px 14px;color:inherit}button{cursor:pointer}button.on,.cta{background:#293fc8;color:white;border-color:#293fc8}.cta{width:100%;margin-top:12px;font-weight:700}article{background:white;padding:20px;border-radius:24px;margin:14px 0;box-shadow:0 6px 25px #1e31540c}h1{font-size:clamp(30px,6vw,46px);letter-spacing:-.055em;line-height:1.14;margin:12px 0 18px}h2{font-size:21px;margin:4px 0 12px}.stage{background:linear-gradient(145deg,#182962,#334aa3);color:white;border-radius:18px;padding:24px;min-height:190px;display:grid;align-content:center;text-align:center}.stage b{font-size:56px;line-height:1.4}.stage p{margin:6px}.stage img{max-height:210px;max-width:100%;margin:auto}label{display:block;margin:12px 0}input,textarea,select{width:100%}textarea{min-height:72px}nav{justify-content:flex-start}p{overflow-wrap:anywhere}.muted{font-size:14px;color:#576274}button:focus-visible{outline:3px solid orange}
-</style><header><strong>◒ 记忆搭子</strong><small>本机体验版</small></header><main><nav><button id="home">试记广场</button><button id="make">＋ 投稿</button><button id="shelf">我的收藏</button></nav><div id="app"></div></main><script>
-const A=document.querySelector('#app'), esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const seed=[
-['英语 · 词义','一把红伞，两个视角','画面','☂','小雨把红伞递给阿哲。站在阿哲的位置是 borrow（借入），站在小雨的位置是 lend（借出）。','你把相机借给朋友。「借出」的英语动词原形是？','lend'],
-['英语 · 词义','一把红伞，两个视角','故事','🌧','雨大了，阿哲伸出空手说：“可以借入一把伞吗？”小雨递过自己的伞说：“我借给你。”把借入连到 borrow，借出连到 lend。','你把相机借给朋友。「借出」的英语动词原形是？','lend'],
-['英语 · 词义','一把红伞，两个视角','联想','🤲','把书拉近自己，说 borrow；向朋友递出书，说 lend。想象手里的书朝哪个方向移动。','你把相机借给朋友。「借出」的英语动词原形是？','lend'],
-['数字 · 顺序','记住储物柜的六位码','组块','🔐','把 031427 分成三块，依次读作 03、14、27，第一块保留零。','写出完整的六位码','031427'],
-['语文 · 古诗','跟着月光记《静夜思》','分镜','🌙','床前看月光 → 地上疑似霜 → 抬头望明月 → 低头思故乡。最后一个镜头配原句“低头思故乡”。','写出“举头望明月”的下一句','低头思故乡']];
-let db;try{db=JSON.parse(localStorage.duetV1)}catch{}db ||= {cards:[],likes:{},saved:{},notes:{},runs:{},pals:{}};let i=0,img='';const all=()=>seed.concat(db.cards),save=()=>{try{localStorage.duetV1=JSON.stringify(db);return true}catch{alert('本机空间已满，本次内容仅在当前页面保留');return false}},btn=(s,f,cls='')=>'<button class="'+cls+'" onclick="'+f+'">'+esc(s)+'</button>';
-function show(n=0){i=n;let c=all()[i];A.innerHTML='<article><small>'+esc(c[0])+'</small><h1>'+esc(c[1])+'</h1><nav>'+all().map((x,k)=>x[1]===c[1]?btn(x[2],'show('+k+')',k===i?'on':''):'').join('')+'</nav><p class="stage">'+(c[7]?'<img alt="用户提供的记忆画面" src="'+esc(c[7])+'">':'<b>'+esc(c[3])+'</b>')+'<span>'+esc(c[4])+'</span></p>'+btn('遮住线索，试试看','quiz()','cta')+'<p class="row">'+btn((db.likes[i]?'♥ 已点赞':'♡ 这个好记'),'toggle(0)')+btn(db.saved[i]?'★ 已收藏':'☆ 收藏复习','toggle(1)')+'</p></article><article><h2>一起记</h2><div id="notes"></div><label>留一句你的记法<input id="note" maxlength="200"></label>'+btn('发布留言','comment()')+'</article><article><h2>换一道任务</h2>'+all().map((x,k)=>all().findIndex(y=>y[1]===x[1])===k?btn(x[1],'show('+k+')'):'').join(' ')+'</article>';notes()}
-function notes(){let ns=db.notes[i]||[];document.querySelector('#notes').innerHTML='<small>演示搭子 · 小禾</small> '+btn(db.pals.demo?'已关注小禾':'关注小禾','pal()')+ns.map(x=>'<p>我 · '+esc(x)+'</p>').join('')}
-function pal(){db.pals.demo=!db.pals.demo;save();notes()}function comment(){let t=document.querySelector('#note');if(t.value.trim()){(db.notes[i]||=[]).push(t.value.trim());save();t.value='';notes()}}function toggle(k){let o=k?db.saved:db.likes;o[i]=!o[i];save();show(i)}
-function quiz(){A.innerHTML='<article><small>独立回忆</small><h1>'+esc(all()[i][5])+'</h1><form id="test"><label>你的答案<input required id="ans" autocomplete="off"></label><button class="cta">核对答案</button></form></article>';document.querySelector('#test').onsubmit=e=>{e.preventDefault();let norm=s=>s.trim().toLowerCase().replace(/[。.!！]$/,'');let ok=norm(document.querySelector('#ans').value)===norm(all()[i][6]);(db.runs[i]||=[]).push(ok);save();A.innerHTML='<article><small>本机练习记录</small><h1>'+(ok?'独立答对了':'再看一次线索')+'</h1><p>参考答案　'+esc(all()[i][6])+'</p><p>本作品累计答对 '+db.runs[i].filter(Boolean).length+' / '+db.runs[i].length+' 次</p>'+btn('返回作品','show(i)','cta')+'</article>'}}
-function create(){img='';A.innerHTML='<article><small>创作工作室</small><h1>把你的记法留下来</h1><form id="form"><label>学习分类<select id="subjectIn">'+subjects.map(s=>'<option>'+s+'</option>').join('')+'</select></label><label>记忆任务<input required id="titleIn" placeholder="例如，区分借入和借出"></label><label>记忆方法<select id="method">'+['画面','故事','联想','分镜','组块','地点','手指','口诀','其他'].map(x=>'<option>'+x+'</option>').join('')+'</select></label><label>正确答案<input required id="keyIn"></label><label>遮住线索后问什么？<input required id="ask"></label><label>你的记忆线索<textarea required id="cue"></textarea></label><button type="button" id="prompt">生成画面提示词</button><textarea id="out" hidden aria-label="可复制的画面提示词"></textarea><label>上传自己的照片或生成好的图片<input type="file" accept="image/png,image/jpeg,image/webp" id="file"></label><button class="cta">保存作品并试记</button></form></article>';let q=id=>document.getElementById(id);q('prompt').onclick=()=>{let o=q('out');o.hidden=false;o.value='为「'+q('titleIn').value+'」创作一张记忆插画。以'+q('method').value+'组织画面，具体表现「'+q('cue').value+'」，帮助回忆「'+q('keyIn').value+'」。主体清晰，动作方向明确，避免画面内文字。'};q('form').onsubmit=async e=>{e.preventDefault();let f=q('file').files[0];if(f){if(!['image/png','image/jpeg','image/webp'].includes(f.type)||f.size>2e6)return alert('请选择小于 2MB 的 PNG、JPEG 或 WebP');img=await new Promise(r=>{let a=new FileReader;a.onload=()=>r(a.result);a.readAsDataURL(f)})}db.cards.push([q('subjectIn').value,q('titleIn').value,q('method').value,'✦',q('cue').value,q('ask').value,q('keyIn').value,img]);save();show(all().length-1)}}
-document.querySelector('#home').onclick=()=>show();document.querySelector('#make').onclick=create;document.querySelector('#shelf').onclick=()=>{A.innerHTML='<article><h1>我的收藏</h1>'+(all().map((x,k)=>db.saved[k]?btn(x[1]+' · '+x[2],'show('+k+')'):'').join(' ') .trim()||'试记后点「收藏复习」，作品就会出现在这里。')+'</article>'};show()
-const space=document.createElement('button');
-space.textContent='个人空间';
-document.querySelector('main > nav').append(space);
-space.onclick=()=>{
-  A.innerHTML='<article><h1>个人空间</h1><section aria-labelledby="palace-title"><h2 id="palace-title">记忆宫殿 <small>待开发</small></h2><p>规划中：用你熟悉的房间或路线安放记忆线索，再沿途回忆。</p></section></article>';
-};
-const tide=document.createElement('button');
-tide.textContent='速记交友';document.querySelector('main > nav').prepend(tide);
-db.bottles ||= [];
-const field=id=>document.getElementById(id);
-function downloadBottle(data,name){
- const url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
- const a=document.createElement('a');a.href=url;a.download=name+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)
-}
-function beach(){
- A.innerHTML='<article style="background:#143e43;color:white"><small style="color:#b5ded6">速记交友 · 口诀漂流瓶</small><h1>给我的照片，配一句口诀。</h1><p>装进一张照片，写下想记住的东西。接瓶的人看图回一句，瓶主挑出最顺口的。</p>'+btn('发布瓶子任务','newBottle()')+'</article><article><h2>我的瓶子与回信</h2><label>接收朋友发来的瓶子或回信文件<input id="incoming" type="file" accept=".json"></label><div id="bList"></div></article>';
- field('bList').innerHTML=db.bottles.map((b,k)=>btn((b.mine?'我发的 · ':'我接的 · ')+b.task+'（'+b.replies.length+'条）','openBottle('+k+')')).join(' ');
- field('incoming').onchange=async e=>{try{const f=e.target.files[0];if(!f||f.size>3100000)throw Error();const p=JSON.parse(await f.text());if(typeof p.id!=='string'||p.id.length>100)throw Error();let k=db.bottles.findIndex(x=>x.id===p.id);
- if(p.type==='duet-bottle'&&k<0){if(typeof p.task!=='string'||!p.task.trim()||p.task.length>180||typeof p.photo!=='string'||!/^data:image\/(jpeg|png|webp);base64,[a-z0-9+/=]+$/i.test(p.photo))throw Error();db.bottles.push({id:p.id,task:p.task,photo:p.photo,mine:false,replies:[],best:-1});k=db.bottles.length-1}
- else if(p.type==='duet-reply'){if(k<0||!db.bottles[k].mine||typeof p.line!=='string'||!p.line.trim()||p.line.length>180||typeof p.nick!=='string'||p.nick.length>24)throw Error();let b=db.bottles[k];if(!b.replies.some(x=>x.nick===p.nick&&x.line===p.line))b.replies.push({nick:p.nick,line:p.line})}
- else if(p.type!=='duet-bottle'||k<0)throw Error();save();openBottle(k)}catch{alert('请选择有效的瓶子文件，或发给你的原瓶回信。')}}
-}
-function newBottle(){A.innerHTML='<article><small>瓶主 · 发布任务</small><h1>把难记的装进瓶子</h1><form id="bForm"><label>自己的照片<input required id="photo" type="file" accept="image/png,image/jpeg,image/webp"></label><label>想记住什么？<textarea required maxlength="180" id="task" placeholder="例如：这是我的玄关。出门前要带钥匙、工牌和饭盒，帮我编句顺口的。"></textarea></label><button class="cta">装瓶</button></form></article>';field('bForm').onsubmit=async e=>{e.preventDefault();let f=field('photo').files[0],task=field('task').value.trim();if(!task||f.size>2000000||!['image/png','image/jpeg','image/webp'].includes(f.type))return alert('请填任务并选择 2MB 以内的照片');let r=new FileReader;r.onload=()=>{db.bottles.push({id:crypto.randomUUID(),mine:true,task,photo:r.result,replies:[],best:-1});save();openBottle(db.bottles.length-1)};r.readAsDataURL(f)}}
-function openBottle(k){const b=db.bottles[k];A.innerHTML='<article><small>口诀漂流瓶 · '+(b.mine?'我的任务':'接到的任务')+'</small><h1>'+esc(b.task)+'</h1><img style="width:100%;max-height:300px;object-fit:contain;background:#edf4f3;border-radius:14px" alt="瓶主上传的任务照片" src="'+esc(b.photo)+'">'+(b.mine?btn('导出瓶子发给朋友','sendBottle('+k+')','cta'):'<form id="reply"><label>你的昵称<input id="nick" maxlength="24" required></label><label>看图投一句口诀<textarea id="line" maxlength="180" required></textarea></label><button class="cta">导出回信给瓶主</button></form>')+'</article><article><h2>收到的口诀</h2>'+b.replies.map((x,j)=>'<p><b>'+esc(x.nick)+'</b>　'+esc(x.line)+'</p>'+(b.best===j?'★ 瓶主精选':b.mine?btn('选为最佳口诀','pick('+k+','+j+')'):'')).join('')+(b.replies.length?'':'<p>还没有回信。</p>')+btn('返回瓶子列表','beach()')+'</article>';if(!b.mine)field('reply').onsubmit=e=>{e.preventDefault();let nick=field('nick').value.trim(),line=field('line').value.trim();if(nick&&line)downloadBottle({type:'duet-reply',id:b.id,nick,line},'我的口诀回信')}}
-function sendBottle(k){const {id,task,photo}=db.bottles[k];downloadBottle({type:'duet-bottle',id,task,photo},'速记漂流瓶')}
-function pick(k,j){db.bottles[k].best=j;save();openBottle(k)}
-tide.onclick=beach;
-const subjects=['英语','语文','数学','科学','专业知识','生活技能','记忆训练','其他学习'];
-function subjectOf(card){const name=card[0].split(' · ')[0];return name==='数字'?'记忆训练':subjects.includes(name)?name:'其他学习'}
-function learning(selected='全部'){
- const tasks=new Map();
- all().forEach((card,index)=>{const subject=subjectOf(card);if(selected!=='全部'&&selected!==subject)return;
- const key=JSON.stringify([subject,card[1]]);if(!tasks.has(key))tasks.set(key,{index,title:card[1],subject,methods:new Set()});tasks.get(key).methods.add(card[2])});
- A.innerHTML='<article><h1>今天想学什么？</h1><nav aria-label="学习分类">'+['全部',...subjects].map(s=>btn(s,"learning(&quot;"+s+"&quot;)",s===selected?'on':'')).join(' ')+'</nav></article><article><h2>'+esc(selected)+'任务</h2>'+([...tasks.values()].map(t=>'<section><small>'+esc(t.subject)+' · '+esc([...t.methods].join(' / '))+'</small><h2>'+btn(t.title,'show('+t.index+')')+'</h2></section>').join('')||'<p>这个分类还没有作品。</p>')+btn('发布学习任务','startLearningPost()')+'</article>';
- window.startLearningPost=()=>{create();if(selected!=='全部')field('subjectIn').value=selected}
-}
-const learnHome=field('home');learnHome.textContent='分类学习';learnHome.onclick=()=>learning();learnHome.parentNode.prepend(learnHome);learning();
-function buildMemoryImagePrompt(card){
- const format={故事:'用三格连续分镜表现起因、动作和结果，人物与道具保持一致。',分镜:'依原文顺序排镜，每格只突出一个可还原原句的动作。',联想:'并列呈现两个可区分的动作，突出联想与答案的对应。',组块:'用独立色块区分每一组，精确保留组的顺序及前导零。',画面:'用一个场景呈现动作发起者、接收者及物品移动方向。'};
- return ['请为学习任务《'+card[1]+'》绘制教学助记图。','采用'+card[2]+'法。'+(format[card[2]]||'逐项将知识和可辨认的视觉线索对应。'),'准确表达以下线索：'+card[4],'用于回忆的目标答案：'+card[6]+'。答案供构图参考，不直接印在画面上。','只保留与知识有关的动作和物品，构图适合手机阅读。'].join('\n')
-}
-const showLesson=show;
-show=function(index=0){
- showLesson(index);const panel=document.createElement('details');
- panel.innerHTML='<summary>生成助记图提示词</summary><label>可编辑的画面提示词<textarea rows="7"></textarea></label><small>日日新生图服务待连接</small>';
- panel.querySelector('textarea').value=buildMemoryImagePrompt(all()[index]);A.querySelector('.stage').after(panel);
-}
-</script></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f8f7f4">
+  <meta name="description" content="记忆搭子 Memory Duet：把知识变成记得住的画面、故事和练习。30 种以上自由组合的分类维度、章节专题和匿名记忆搭子社区。">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./social.css">
+  <link rel="stylesheet" href="./scene.css">
+  <title>Memory Duet · 记忆搭子</title>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="主导航">
+      <a class="brand" href="#home" data-nav="home">
+        <span class="brand-mark" aria-hidden="true"><span>m</span><span>✦</span></span>
+        <span class="brand-word"><b>memory duet</b><small>记 忆 搭 子</small></span>
+      </a>
+      <div id="sceneNav"></div>
+      <div class="sidebar-bottom">
+        <div class="tiny-art" aria-hidden="true"><span class="orbit orbit-one"></span><span class="orbit orbit-two"></span><span class="art-spark">✳</span></div>
+        <p class="sidebar-quote" id="sideSceneCopy">记住知识的方式，可以和别人不一样。</p>
+        <span class="tiny-badge">MAKE MEMORY STICK</span>
+      </div>
+    </aside>
+
+    <div class="content-shell">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="mobile-mark">m✦</span><strong>memory duet</strong></div>
+        <div class="topbar-title"><span class="topbar-orb"></span><span id="sceneTitle">你的灵感学习空间</span></div>
+        <label class="search-bar"><span aria-hidden="true">⌕</span><input id="globalSearch" type="search" placeholder="搜索知识、专题、记忆方法…" aria-label="全站搜索"><kbd>/</kbd></label>
+        <div id="topSceneAction"></div>
+      </header>
+
+      <section class="scene-bar" aria-label="选择使用场景"><div class="scene-bar-copy"><strong>现在想做什么？</strong><small id="sceneCaption"></small></div><div class="scene-switch" id="sceneSwitch" role="group" aria-label="切换学习或交友场景"></div></section>
+      <div class="workspace">
+        <main id="app" class="app-main" tabindex="-1" aria-live="polite"></main>
+        <aside id="rail" class="right-rail" aria-label="学习动态"></aside>
+      </div>
+    </div>
+  </div>
+
+  <nav id="mobileSceneNav" class="bottom-nav" aria-label="移动端场景导航"></nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <noscript><div class="no-js">请启用 JavaScript，以使用 Memory Duet 的交互式学习内容。</div></noscript>
+  <script src="./data/catalog.js" defer></script>
+  <script src="./data/expansion.js" defer></script>
+  <script src="./social.js" defer></script>
+  <script src="./scene.js" defer></script>
+  <script src="./app.js" defer></script>
+</body>
+</html>

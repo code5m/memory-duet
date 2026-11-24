@@ -1,0 +1,2 @@
+const S=require('../../utils/scene.js');
+Component({data:{modes:S.modes,mode:'mixed'},lifetimes:{attached(){this.refresh();}},pageLifetimes:{show(){this.refresh();}},methods:{refresh(){this.setData({mode:S.get()});},change(e){const mode=e.currentTarget.dataset.mode;if(mode===S.get())return;S.choose(mode);this.refresh();}}});

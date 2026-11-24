@@ -1,0 +1,19 @@
+<view class="container tab-page"><scene-switch/>
+  <view class="label">CHOOSE YOUR VIEW · 30 FACETS</view><view class="title">随意切换、交叉组合分类</view>
+  <view class="sub">不同维度同时满足；相同维度可选择多个分类值。</view>
+  <view class="card"><view class="sub">当前分类维度</view>
+    <picker range="{{dimensions}}" range-key="label" value="{{index}}" bindchange="dimensionChange">
+      <view class="control">{{dimensions[index].label}} ▾</view></picker>
+    <view class="sub">添加或取消当前维度的值</view>
+    <picker range="{{values}}" value="{{valueIndex}}" bindchange="valueChange"><view class="control">{{values[valueIndex]}} ▾</view></picker>
+  </view>
+  <view class="card"><view class="row"><view class="card-title">组合条件 · {{filters.length}}</view><text class="label" bindtap="clear">清空</text></view>
+    <view class="facet-tags"><text wx:for="{{filters}}" wx:key="label" class="filter-tag" data-key="{{item.key}}" data-value="{{item.value}}" bindtap="remove">{{item.label}} ×</text></view>
+  </view>
+  <view class="sub">匹配 {{count}} 张学习卡</view>
+  <view wx:for="{{lessons}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="open">
+    <view class="card-title">{{item.icon}} {{item.title}}</view>
+    <view class="sub">{{item.topic}} · {{item.method}} · {{item.minutes}} 分钟</view>
+  </view>
+  <view wx:if="{{!lessons.length}}" class="empty">没有符合条件的卡片，试试清空其中一项。</view>
+</view>

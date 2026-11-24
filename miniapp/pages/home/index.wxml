@@ -1,0 +1,14 @@
+<view class="container tab-page"><scene-switch/>
+  <view wx:if="{{mode==='mixed'}}" class="scene-grid">
+    <view class="scene-tile" bindtap="learn"><text class="glyph">▤</text><view class="card-title">今天想学习</view><view class="sub">专题 · 分类 · 独立回忆</view><view class="scene-link">进入学习 ↗</view></view>
+    <view class="scene-tile social" bindtap="social"><text class="glyph">♧</text><view class="card-title">今天想交友</view><view class="sub">难题 · 秘诀 · 学习搭子</view><view class="scene-link">去记忆海岸 ↗</view></view>
+  </view>
+  <view class="hero"><view class="label">FOCUS · YOUR LEARNING STUDIO</view><view class="title">每个知识点，都有好记的办法。</view>
+    <view class="sub">{{dimensions}} 种分类维度 · {{topics.length}} 个专题 · {{lessons}} 张学习卡</view>
+    <button class="button" bindtap="catalog">开始分类学习 ↗</button></view>
+  <view wx:if="{{last}}" class="card"><view class="label">CONTINUE LEARNING</view><view class="card-title">{{last.title}}</view><view class="sub">继续上次的知识点（开启新一轮）</view><button class="button" bindtap="resume">继续学习</button></view>
+  <view class="scene-grid"><view class="scene-tile" bindtap="review"><view class="card-title">{{due}} 张待巩固</view><view class="sub">独立回忆与复习 ↗</view></view>
+    <view class="scene-tile" bindtap="create"><view class="card-title">＋ 创作记忆卡</view><view class="sub">建立自己的知识 ↗</view></view></view>
+  <view class="title">精选专题</view>
+  <view wx:for="{{topics}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="openTopic"><view class="title">{{item.icon}} {{item.title}}</view><view class="sub">{{item.subject}} · {{item.subtitle}}</view></view>
+</view>

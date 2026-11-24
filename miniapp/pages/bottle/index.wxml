@@ -1,0 +1,29 @@
+<view wx:if="{{item}}" class="container"><scene-switch/>
+  <view wx:if="{{error}}" class="error">{{error}}</view>
+  <view class="label">{{item.kindText}} · {{item.subject}}</view>
+  <view class="title">{{item.title}}</view>
+  <view class="card">
+    <view class="sub" data-id="{{item.author.id}}" bindtap="openAuthor">来自 {{item.author.nickname}} ↗</view>
+    <view class="body">{{item.content}}</view><button wx:if="{{item.kind==='secret'}}" bindtap="toCard">转成我的学习卡草稿 ↗</button>
+    <image wx:if="{{item.image}}" class="photo" src="{{item.image}}" mode="aspectFit"/>
+    <view class="row"><text class="link" data-kind="like" bindtap="reaction">{{item.liked?'♥ 已赞':'♡ 点赞'}} {{item.likes}}</text>
+      <text class="link" data-kind="save" bindtap="reaction">{{item.saved?'★ 已收藏':'☆ 收藏'}}</text>
+      <text class="link" data-type="bottle" bindtap="report">举报</text></view>
+  </view>
+  <view class="title">搭子回信 · {{replies.length}}</view>
+  <view wx:for="{{replies}}" wx:key="id" class="card">
+    <view class="row"><text class="label" data-id="{{item.author.id}}" bindtap="openAuthor">{{item.author.nickname}}</text>
+      <text wx:if="{{item.is_best}}" class="pill">✦ 瓶主精选</text></view>
+    <view class="body">{{item.content}}</view><view class="sub">{{item.method}}</view>
+    <view class="row"><text class="link" data-type="reply" data-id="{{item.id}}" data-kind="like" bindtap="reaction">♡ 点赞</text>
+      <text wx:if="{{guest.id===item.author.id}}" class="sub">我的回信</text>
+      <text wx:if="{{isOwner&&!item.is_best}}" class="link" data-id="{{item.id}}" bindtap="best">精选</text>
+      <text class="link" data-type="reply" data-id="{{item.id}}" bindtap="report">举报</text></view>
+  </view>
+  <view class="card"><view class="card-title">分享一个更好记的办法</view>
+    <view class="sub">不看提示自己作答，才能算真正的独立回忆。</view>
+    <textarea class="control reply" placeholder="写下你的口诀、步骤或可验证的秘诀" maxlength="800" data-key="text" value="{{text}}" bindinput="input"/>
+    <input class="control" placeholder="记忆方法（可选）" maxlength="60" data-key="method" value="{{method}}" bindinput="input"/>
+    <button class="button" bindtap="reply">发送回信 ↗</button>
+  </view>
+</view>

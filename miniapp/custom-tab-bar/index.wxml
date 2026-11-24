@@ -1,0 +1,1 @@
+<view class="nav {{mode==='social'?'sea':''}}"><view wx:for="{{items}}" wx:key="id" data-id="{{item.id}}" bindtap="tap" class="item {{active===item.id?'active':''}}"><text class="icon">{{item.icon}}</text><text class="label">{{item.label}}</text></view></view>

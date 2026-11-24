@@ -1,0 +1,28 @@
+<view wx:if="{{room}}" class="container"><scene-switch/>
+  <view wx:if="{{error}}" class="sub">{{error}}</view>
+  <view class="label">{{room.subject}} · GROUP ACTIVE RECALL</view>
+  <view class="title">{{room.title}}</view>
+  <view class="card">
+    <view class="card-title">{{room.question}}</view>
+    <view wx:if="{{room.my_attempt}}">
+      <view class="hint">{{room.my_attempt.outcome==='independent-correct'?'独立正确':room.my_attempt.outcome==='prompted-correct'?'提示后正确':'本轮未答对'}}</view>
+      <view class="sub">你的答案：{{room.my_attempt.answer}}</view>
+      <view class="sub">参考答案：{{room.reference_answer}}</view>
+    </view>
+    <view wx:elif="{{joined}}">
+      <input class="control" placeholder="请独立写出答案" maxlength="500" bindinput="input" value="{{answer}}"/>
+      <view wx:if="{{hintUsed}}" class="hint">{{room.hint}}</view>
+      <button wx:if="{{!hintUsed}}" bindtap="reveal">查看提示（不会计作独立正确）</button>
+      <button class="button" bindtap="submit">提交并核对答案 ↗</button>
+    </view>
+    <view wx:else><view class="sub">加入后可参与本轮独立回忆。</view>
+      <button class="button" bindtap="join">加入共学室</button></view>
+  </view>
+  <view class="title">一起学习的搭子 · {{room.members.length}}/8</view>
+  <view wx:for="{{room.members}}" wx:key="id" class="card">
+    <view class="card-title">{{item.nickname}}</view>
+    <view class="sub">{{item.outcome==='independent-correct'?'独立答对':item.outcome==='prompted-correct'?'提示后答对':item.outcome==='incorrect'?'本轮未答对':'尚未作答'}}</view>
+  </view>
+  <button bindtap="report">举报不合适的共学内容</button>
+  <view class="sub">参考答案由服务器做精确文本核对。是否使用外部帮助需要参与者自行如实申报。</view>
+</view>

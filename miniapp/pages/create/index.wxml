@@ -1,0 +1,9 @@
+<view class="container"><scene-switch/><view class="label">CREATE YOUR OWN MEMORY</view><view class="title">创作私人学习卡</view>
+<view wx:if="{{fromSecret}}" class="card"><view class="sub">内容来自公开记忆秘诀。请自行核实，并补充可独立回答的问题和正确答案；不会自动发表或记作已掌握。</view></view>
+<view class="card"><input class="control" maxlength="65" placeholder="知识点标题" data-key="title" value="{{title}}" bindinput="field"/>
+<input class="control" maxlength="40" placeholder="学科" data-key="subject" value="{{subject}}" bindinput="field"/>
+<input class="control" maxlength="60" placeholder="主记忆方法" data-key="method" value="{{method}}" bindinput="field"/>
+<textarea class="control" maxlength="1200" placeholder="理解与助记线索" data-key="cue" value="{{cue}}" bindinput="field"/>
+<input class="control" maxlength="250" placeholder="独立回忆问题" data-key="question" value="{{question}}" bindinput="field"/>
+<input class="control" maxlength="300" placeholder="核实过的参考答案" data-key="answer" value="{{answer}}" bindinput="field"/>
+<button class="button" bindtap="save">保存到本机并试记 ↗</button></view></view>

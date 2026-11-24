@@ -1,0 +1,52 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/catalog/index",
+    "pages/lesson/index",
+    "pages/social/index",
+    "pages/bottle/index",
+    "pages/partner/index",
+    "pages/rooms/index",
+    "pages/room/index",
+    "pages/profile/index",
+    "pages/review/index",
+    "pages/create/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "记忆搭子",
+    "navigationBarBackgroundColor": "#f8f7f4",
+    "navigationBarTextStyle": "black"
+  },
+  "tabBar": {
+    "color": "#878797",
+    "selectedColor": "#6754dc",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "探索"
+      },
+      {
+        "pagePath": "pages/catalog/index",
+        "text": "分类"
+      },
+      {
+        "pagePath": "pages/review/index",
+        "text": "复习"
+      },
+      {
+        "pagePath": "pages/social/index",
+        "text": "交友"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的"
+      }
+    ],
+    "custom": true
+  },
+  "style": "v2",
+  "usingComponents": {
+    "scene-switch": "/components/scene-switch/index"
+  }
+}
