@@ -1,8 +1,8 @@
-const api=require('../../utils/community.js');
+const api=require('../../utils/community.js'),S=require('../../utils/scene.js');
 Page({
   data:{item:null,replies:[],error:'',text:'',method:'',guest:null,isOwner:false},
   onLoad(o){this.id=o.id||'';this.load();},
-  onShow(){this.load();},
+  onShow(){S.socialPage();this.load();},
   async load(){
     if(!this.id)return;
     try{const [d,m]=await Promise.all([api.call('/bottles/'+encodeURIComponent(this.id)),api.call('/me')]);
@@ -31,6 +31,7 @@ Page({
     try{await api.call('/best',{reply_id:e.currentTarget.dataset.id});this.load();}
     catch(err){this.setData({error:err.message});}
   },
+  toCard(){if(this.data.item&&this.data.item.kind==='secret')S.secret(this.data.item);},
   openAuthor(e){wx.navigateTo({url:'/pages/partner/index?id='+e.currentTarget.dataset.id});},
   async report(e){
     if(!this.requireGuest())return;

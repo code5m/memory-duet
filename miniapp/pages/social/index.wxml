@@ -1,7 +1,7 @@
-<view class="container">
+<view class="container tab-page {{mode==='social'?'scene-social':''}}"><scene-switch/>
   <view class="hero social-hero"><view class="label">MEMORY SOCIAL · GUEST MODE</view>
     <view class="title">记忆很难，<text style="color:#6951d5">一起想办法。</text></view>
-    <view class="sub">太难记漂流瓶 · 记忆秘诀瓶 · 任意昵称免密码参与</view>
+    <view class="sub">太难记漂流瓶 · 记忆秘诀瓶 · 任意昵称免密码参与</view><view wx:if="{{connected}}" class="row"><button class="button half" data-kind="hard" bindtap="newBottle">◌ 发难题瓶</button><button class="button half" data-kind="secret" bindtap="newBottle">✦ 发秘诀瓶</button></view>
   </view>
   <view wx:if="{{error}}" class="error">{{error}}</view>
   <view wx:if="{{!connected}}" class="card"><view class="title">共享社区未配置</view>
@@ -61,7 +61,7 @@
       <input class="control" placeholder="标签，逗号分隔" maxlength="160" data-key="tags" value="{{tags}}" bindinput="field"/>
       <button bindtap="choosePhoto">添加记忆照片（可选，小于 500KB）</button>
       <view wx:if="{{photo}}" class="sub">已选照片 ✓</view>
-      <view class="sub">发布内容公开可见；不要包含个人隐私。</view>
+      <view class="sub">这只是草稿。点击发布前核对内容和图片；学习笔记、作答记录与参考答案不会自动复制。</view>
       <button class="button" bindtap="publish">发布到记忆海岸 ↗</button>
     </view>
     <view wx:elif="{{screen==='matches'}}">

@@ -1,10 +1,10 @@
-<view wx:if="{{item}}" class="container">
+<view wx:if="{{item}}" class="container"><scene-switch/>
   <view wx:if="{{error}}" class="error">{{error}}</view>
   <view class="label">{{item.kindText}} · {{item.subject}}</view>
   <view class="title">{{item.title}}</view>
   <view class="card">
     <view class="sub" data-id="{{item.author.id}}" bindtap="openAuthor">来自 {{item.author.nickname}} ↗</view>
-    <view class="body">{{item.content}}</view>
+    <view class="body">{{item.content}}</view><button wx:if="{{item.kind==='secret'}}" bindtap="toCard">转成我的学习卡草稿 ↗</button>
     <image wx:if="{{item.image}}" class="photo" src="{{item.image}}" mode="aspectFit"/>
     <view class="row"><text class="link" data-kind="like" bindtap="reaction">{{item.liked?'♥ 已赞':'♡ 点赞'}} {{item.likes}}</text>
       <text class="link" data-kind="save" bindtap="reaction">{{item.saved?'★ 已收藏':'☆ 收藏'}}</text>

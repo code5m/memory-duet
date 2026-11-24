@@ -8,6 +8,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./social.css">
+  <link rel="stylesheet" href="./scene.css">
   <title>Memory Duet · 记忆搭子</title>
 </head>
 <body>
@@ -17,26 +18,10 @@
         <span class="brand-mark" aria-hidden="true"><span>m</span><span>✦</span></span>
         <span class="brand-word"><b>memory duet</b><small>记 忆 搭 子</small></span>
       </a>
-      <div class="sidebar-section">
-        <span class="sidebar-caption">你的学习空间</span>
-        <nav class="side-links">
-          <button type="button" data-nav="home" class="side-link active"><span class="nav-icon">⌂</span>探索首页</button>
-          <button type="button" data-nav="catalog" class="side-link"><span class="nav-icon">▦</span>分类学习<span class="nav-hint">30</span></button>
-          <button type="button" data-nav="topics" class="side-link"><span class="nav-icon">◈</span>专题图书馆</button>
-          <button type="button" data-nav="review" class="side-link"><span class="nav-icon">◎</span>回忆练习</button>
-        </nav>
-      </div>
-      <div class="sidebar-section">
-        <span class="sidebar-caption">一起创造</span>
-        <nav class="side-links">
-          <button type="button" data-nav="create" class="side-link"><span class="nav-icon">✎</span>创作记忆卡</button>
-          <button type="button" data-nav="community" class="side-link"><span class="nav-icon">♧</span>记忆交友 <span class="nav-hint">NEW</span></button>
-          <button type="button" data-nav="profile" class="side-link"><span class="nav-icon">◉</span>我的空间</button>
-        </nav>
-      </div>
+      <div id="sceneNav"></div>
       <div class="sidebar-bottom">
         <div class="tiny-art" aria-hidden="true"><span class="orbit orbit-one"></span><span class="orbit orbit-two"></span><span class="art-spark">✳</span></div>
-        <p class="sidebar-quote">记住知识的方式，<br>可以和别人不一样。</p>
+        <p class="sidebar-quote" id="sideSceneCopy">记住知识的方式，可以和别人不一样。</p>
         <span class="tiny-badge">MAKE MEMORY STICK</span>
       </div>
     </aside>
@@ -44,11 +29,12 @@
     <div class="content-shell">
       <header class="topbar">
         <div class="mobile-brand"><span class="mobile-mark">m✦</span><strong>memory duet</strong></div>
-        <div class="topbar-title"><span class="topbar-orb"></span><span>你的灵感学习空间</span></div>
+        <div class="topbar-title"><span class="topbar-orb"></span><span id="sceneTitle">你的灵感学习空间</span></div>
         <label class="search-bar"><span aria-hidden="true">⌕</span><input id="globalSearch" type="search" placeholder="搜索知识、专题、记忆方法…" aria-label="全站搜索"><kbd>/</kbd></label>
-        <button type="button" data-nav="create" class="top-create"><span>✦</span> 创建作品</button>
+        <div id="topSceneAction"></div>
       </header>
 
+      <section class="scene-bar" aria-label="选择使用场景"><div class="scene-bar-copy"><strong>现在想做什么？</strong><small id="sceneCaption"></small></div><div class="scene-switch" id="sceneSwitch" role="group" aria-label="切换学习或交友场景"></div></section>
       <div class="workspace">
         <main id="app" class="app-main" tabindex="-1" aria-live="polite"></main>
         <aside id="rail" class="right-rail" aria-label="学习动态"></aside>
@@ -56,19 +42,14 @@
     </div>
   </div>
 
-  <nav class="bottom-nav" aria-label="移动端导航">
-    <button type="button" data-nav="home" class="active"><span>⌂</span><small>首页</small></button>
-    <button type="button" data-nav="catalog"><span>▦</span><small>分类</small></button>
-    <button type="button" data-nav="topics"><span>◈</span><small>专题</small></button>
-    <button type="button" data-nav="community"><span>♧</span><small>交友</small></button>
-    <button type="button" data-nav="profile"><span>◉</span><small>我的</small></button>
-  </nav>
+  <nav id="mobileSceneNav" class="bottom-nav" aria-label="移动端场景导航"></nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <noscript><div class="no-js">请启用 JavaScript，以使用 Memory Duet 的交互式学习内容。</div></noscript>
   <script src="./data/catalog.js" defer></script>
   <script src="./data/expansion.js" defer></script>
   <script src="./social.js" defer></script>
+  <script src="./scene.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>

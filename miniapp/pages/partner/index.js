@@ -1,5 +1,7 @@
+const S=require('../../utils/scene.js');
 const api=require('../../utils/community.js');
 Page({
+  onShow(){S.socialPage();},
   data:{user:null,guest:null,messages:[],content:'',error:''},
   onLoad(o){this.id=o.id;this.load();},
   async load(){

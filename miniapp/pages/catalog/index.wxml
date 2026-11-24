@@ -1,4 +1,4 @@
-<view class="container">
+<view class="container tab-page"><scene-switch/>
   <view class="label">CHOOSE YOUR VIEW · 30 FACETS</view><view class="title">随意切换、交叉组合分类</view>
   <view class="sub">不同维度同时满足；相同维度可选择多个分类值。</view>
   <view class="card"><view class="sub">当前分类维度</view>

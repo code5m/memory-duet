@@ -6,7 +6,7 @@
   let token=localStorage.getItem(TOKEN_KEY)||"";
   let me=null,root=null,booted=false,requestId=0;
   let screen="feed",kind="all",sort="new",query="",feed=[],selected=null,replies=[],user=null,
-      matches=[],challenges=[],leaders=[],inbox=[],messages=[],peer=null,rooms=[],room=null,roomHintUsed=false,subscreen="",draftKind="hard";
+      matches=[],challenges=[],leaders=[],inbox=[],messages=[],peer=null,rooms=[],room=null,roomHintUsed=false,subscreen="",draftKind="hard",composeDraft=null,resumeAfterGuest=null;
   const labels={hard:"太难记漂流瓶",secret:"记忆秘诀瓶"};
   const icons={hard:"◌",secret:"✦"};
   const stateName={hard:"分享你的难题，让搭子来支招",secret:"把真正有效的记忆方法传递出去"};
@@ -29,18 +29,29 @@
     if(!response.ok||!data.ok)throw Error(data.error||"操作失败");
     return data;
   }
+  function captureDraft(){const f=document.getElementById('socialCompose');if(!f||screen!=='compose')return;const d=new FormData(f);composeDraft={kind:d.get('kind'),title:d.get('title'),content:d.get('content'),subject:d.get('subject'),method:d.get('method'),tags:d.get('tags')};draftKind=composeDraft.kind;}
+  function prepare(section,draft){
+    requestId++;
+    if(draft){
+      composeDraft=draft;draftKind=draft.kind==="secret"?"secret":"hard";screen="compose";return;
+    }
+    if(section==="hard"||section==="secret"){kind=section;screen="feed";query="";return;}
+    if(section==="feed"){kind="all";query="";}
+    screen=["feed","matches","rooms","challenges","leaderboard","inbox","saved","profile","compose"].includes(section)?section:"feed";
+  }
+  function section(){return screen==="entry"&&resumeAfterGuest?resumeAfterGuest:screen==="feed"?(kind==="all"?"feed":kind):screen==="detail"?(selected&&selected.kind||"feed"):screen==="room"?"rooms":screen;}
   function view(){
     return '<section class="duet-social" id="duetSocial"><div class="social-hero">'+
       '<div><span class="eyebrow">LEARN TOGETHER / NO PASSWORD</span>'+
       '<h1>记忆很难，<br><em>我们一起想办法。</em></h1>'+
       '<p>扔出一个太难记的问题，或接住一条有用的记忆秘诀。分享、尝试、再验证。</p>'+
-      '<button type="button" class="btn-primary" data-social="compose" data-kind="hard">＋ 发布漂流瓶</button></div>'+
+      '<div class="scene-bottle-actions"><button type="button" class="btn-primary" data-social="compose" data-kind="hard">◌ 发太难记漂流瓶</button> <button type="button" class="btn-secondary" data-social="compose" data-kind="secret">✦ 分享记忆秘诀</button></div></div>'+
       '<div class="social-hero-art" aria-hidden="true"><span>✦</span><span>✉</span><span>◌</span></div></div>'+
       '<div id="socialMount" aria-live="polite"><div class="social-loading">正在连接记忆海岸…</div></div></section>';
   }
   function mount(){
     root=document.getElementById("socialMount");
-    if(!root)return;
+    if(!root||!root.isConnected)return;
     if(!booted){
       booted=true;
       root.addEventListener("click",onClick);
@@ -49,7 +60,7 @@
       root.addEventListener("keydown",e=>{if(e.key==="Escape"&&screen==="detail"){screen="feed";load();}});
       document.querySelector("#duetSocial").addEventListener("click",e=>{
         const control=e.target.closest('[data-social="compose"]');
-        if(control){e.preventDefault();if(!requireGuest())return;draftKind=control.dataset.kind||"hard";screen="compose";render();}
+        if(control&&!root.contains(control)){e.preventDefault();composeDraft=null;draftKind=control.dataset.kind||"hard";screen="compose";if(!requireGuest())return;render();}
       });
     }
     // Re-rendering the outer SPA creates a new DOM node, rebind its listeners.
@@ -57,7 +68,7 @@
       root.addEventListener("click",onClick);root.addEventListener("submit",onSubmit);root.addEventListener("change",onChange);
       document.querySelector("#duetSocial").addEventListener("click",e=>{
         const b=e.target.closest('[data-social="compose"]');
-        if(b){e.preventDefault();if(!requireGuest())return;draftKind=b.dataset.kind||"hard";screen="compose";render();}
+        if(b&&!root.contains(b)){e.preventDefault();composeDraft=null;draftKind=b.dataset.kind||"hard";screen="compose";if(!requireGuest())return;render();}
       });
     }
     bootstrap();
@@ -69,12 +80,13 @@
         if(data.guest)me=data.guest;
         else{token="";me=null;localStorage.removeItem(TOKEN_KEY);}
       }
+      if(["compose","matches","inbox","saved","profile"].includes(screen)&&!me){requireGuest();return;}
       await load();
     }catch(e){renderError(e.message);}
   }
   function requireGuest(){
     if(me)return true;
-    screen="entry";render();notify("无需密码，输入任意昵称即可进入");
+    resumeAfterGuest=screen;screen="entry";render();notify("无需密码，输入任意昵称即可进入");
     return false;
   }
   function navbar(){
@@ -133,17 +145,19 @@
       '<p class="social-disclaimer">此操作会创建一个临时游客身份，并将会话标识保存在当前浏览器。游客数据在服务端共享，但无法依靠昵称验证所有权。</p></div>';
   }
   function composeView(){
+    const draft=composeDraft||{};
     return '<div class="social-panel"><span class="eyebrow">CREATE / MEMORY BOTTLE</span><h2>装进一只记忆瓶</h2>'+
       '<p>太难记是求助，记忆秘诀是分享。作品会公开展示，请勿填写密码、住址、电话号码或未经同意的他人照片。</p>'+
       '<form id="socialCompose" class="social-form"><label>瓶子类型</label>'+
       '<div class="social-radio"><label><input type="radio" name="kind" value="hard" '+(draftKind==="hard"?"checked":"")+'> ◌ 太难记漂流瓶</label>'+
       '<label><input type="radio" name="kind" value="secret" '+(draftKind==="secret"?"checked":"")+'> ✦ 记忆秘诀瓶</label></div>'+
-      '<label>给它取一个标题<input class="form-control" name="title" required maxlength="90" placeholder="例如：英语 borrow 和 lend 总是搞混"></label>'+
-      '<label>内容 / 难点 / 方法步骤<textarea class="form-control" name="content" required maxlength="1500" rows="6" placeholder="说清楚要记的知识，或写出秘诀、适用对象和如何自行验证…"></textarea></label>'+
-      '<div class="social-form-grid"><label>学习领域<select class="form-control" name="subject">'+SUBJECTS.map(x=>'<option>'+x+'</option>').join("")+'</select></label>'+
-      '<label>记忆方法（可选）<input class="form-control" name="method" maxlength="60" placeholder="画面 / 故事 / 组块…"></label></div>'+
-      '<label>标签（可选，用逗号分隔，最多 8 个）<input class="form-control" name="tags" maxlength="160" placeholder="词义, 易混词, 英语"></label>'+
+      '<label>给它取一个标题<input class="form-control" name="title" required maxlength="90" value="'+attr(draft.title||"")+'" placeholder="例如：英语 borrow 和 lend 总是搞混"></label>'+
+      '<label>内容 / 难点 / 方法步骤<textarea class="form-control" name="content" required maxlength="1500" rows="6" placeholder="说清楚要记的知识，或写出秘诀、适用对象和如何自行验证…">'+esc(draft.content||"")+'</textarea></label>'+
+      '<div class="social-form-grid"><label>学习领域<select class="form-control" name="subject">'+SUBJECTS.map(x=>'<option '+(x===draft.subject?'selected':'')+'>'+esc(x)+'</option>').join("")+'</select></label>'+
+      '<label>记忆方法（可选）<input class="form-control" name="method" maxlength="60" value="'+attr(draft.method||"")+'" placeholder="画面 / 故事 / 组块…"></label></div>'+
+      '<label>标签（可选，用逗号分隔，最多 8 个）<input class="form-control" name="tags" maxlength="160" value="'+attr(draft.tags||"")+'" placeholder="词义, 易混词, 英语"></label>'+
       '<label>配图（可选，500KB 以内 PNG/JPEG/WebP）<input class="form-control" name="image" type="file" accept="image/png,image/jpeg,image/webp"></label>'+
+      '<p class="social-disclaimer">这只是草稿；检查文字与图片后，由你点击发布。学习笔记、作答记录和参考答案不会自动复制到瓶子。</p>'+
       '<div class="social-form-bottom">'+button("取消","screen",'data-screen="feed"','btn-secondary')+
       '<button class="btn-primary" type="submit">抛向记忆海岸 ↗</button></div></form></div>';
   }
@@ -158,6 +172,7 @@
       (b.image&&/^data:image\/(png|jpeg|webp);base64,/.test(b.image)?'<img class="social-detail-image" alt="发布者提供的记忆配图" src="'+attr(b.image)+'">':"")+
       '<div class="social-tag-row">'+(b.tags||[]).map(tag).join("")+'</div>'+
       '<div class="social-detail-actions">'+
+      (b.kind==="secret"?button("转成我的学习卡草稿","secret-to-card",'','social-small-primary'):"")+
       button((b.liked?"♥ 已点赞":"♡ 点赞")+" "+(b.likes||0),"reaction",'data-type="bottle" data-id="'+attr(b.id)+'" data-kind="like"')+
       button(b.saved?"★ 已收藏":"☆ 收藏","reaction",'data-type="bottle" data-id="'+attr(b.id)+'" data-kind="save"')+
       (!isOwner?button("关注作者","follow",'data-id="'+attr(b.author.id)+'"'):tag("我的瓶子"))+
@@ -293,14 +308,15 @@
       '<button class="btn-primary" type="submit">提交举报</button>'+button("取消","screen",'data-screen="feed"','btn-secondary')+'</form></div>';
   }
   function render(){
-    if(!root)return;
+    if(!root||!root.isConnected)return;
     const screens={feed:feedView,entry:entryView,compose:composeView,detail:detailView,profile:profileView,
       matches:matchesView,user:userView,challenges:challengesView,rooms:roomsView,room:roomView,roomCompose:roomComposeView,leaderboard:leaderboardView,
       inbox:inboxView,dm:dmView,report:reportView,saved:()=>'<div class="social-heading"><h2>收藏的记忆瓶</h2></div><div class="social-feed">'+(feed.length?feed.map(itemCard).join(""):'<div class="social-empty">暂时没有收藏的瓶子。</div>')+'</div>'};
     root.innerHTML=navbar()+'<div class="social-inner">'+(screens[screen]||feedView)()+'</div>';
+    if(window.MemoryDuetSceneBridge)window.MemoryDuetSceneBridge.sectionChanged(section());
   }
   function renderError(msg){
-    if(!root)return;
+    if(!root||!root.isConnected)return;
     root.innerHTML=navbar()+'<div class="social-panel social-error"><h3>暂时无法连接社区</h3><p>'+esc(msg)+'</p>'+
       button("重试连接","retry")+'<p class="social-disclaimer">课程分类和本机记忆练习仍可继续使用。共享交友需要服务器在线。</p></div>';
   }
@@ -348,7 +364,7 @@
     if(!b)return;
     const action=b.dataset.social,id=b.dataset.id;
     event.preventDefault();
-    if(action==="entry"){screen="entry";render();return;}
+    if(action==="entry"){resumeAfterGuest=screen==="entry"?"feed":screen;screen="entry";render();return;}
     if(action==="retry"){bootstrap();return;}
     if(action==="signout"){
       token="";me=null;localStorage.removeItem(TOKEN_KEY);screen="feed";await load();notify("已切换为访客；原游客无法靠昵称找回");return;
@@ -358,7 +374,8 @@
       if(screen==="profile")render();else await load();return;
     }
     if(action==="kind"){kind=b.dataset.kind;screen="feed";await load();return;}
-    if(action==="compose"){if(!requireGuest())return;draftKind=b.dataset.kind||draftKind;screen="compose";render();return;}
+    if(action==="compose"){composeDraft=null;draftKind=b.dataset.kind||draftKind;screen="compose";if(!requireGuest())return;render();return;}
+    if(action==="secret-to-card"){if(selected&&selected.kind==="secret"&&window.MemoryDuetSceneBridge)window.MemoryDuetSceneBridge.createFromSecret({title:selected.title,content:"来源：公开记忆秘诀（请先核实）\n"+selected.content,subject:selected.subject,method:selected.method});return;}
     if(action==="bottle"){selected={id:id};screen="detail";await load();return;}
     if(action==="random"){
       try{
@@ -417,7 +434,7 @@
     if(form.id==="guestForm"){
       await doAction(async()=>{
         const data=await call("/guest",{body:{nickname:String(f.get("nickname")||""),interests:splitTags(f.get("interests"))}});
-        token=data.token;localStorage.setItem(TOKEN_KEY,token);me=data.guest;screen="feed";notify("欢迎来到记忆海岸，"+me.nickname);
+        token=data.token;localStorage.setItem(TOKEN_KEY,token);me=data.guest;screen=resumeAfterGuest||"feed";resumeAfterGuest=null;notify("欢迎来到记忆海岸，"+me.nickname);
       });return;
     }
     if(form.id==="socialSearch"){query=String(f.get("search")||"").trim();await load();return;}
@@ -426,7 +443,7 @@
       await doAction(async()=>{
         const payload={kind:f.get("kind"),title:f.get("title"),content:f.get("content"),subject:f.get("subject"),
           method:f.get("method"),tags:splitTags(f.get("tags")),image:await imageToData(f.get("image"))};
-        const data=await call("/bottles",{body:payload});selected={id:data.id};screen="detail";
+        const data=await call("/bottles",{body:payload});composeDraft=null;selected={id:data.id};screen="detail";
         notify("你的记忆瓶已经入海");
       });return;
     }
@@ -469,5 +486,5 @@
     if(target.id==="socialSort"){sort=target.value;load();}
     if(target.name==="kind" && target.closest("#socialCompose"))draftKind=target.value;
   }
-  window.MemoryDuetSocial={view,mount};
+  window.MemoryDuetSocial={view,mount,prepare,section,captureDraft};
 })();

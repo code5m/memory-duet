@@ -1,4 +1,4 @@
-<view wx:if="{{user}}" class="container">
+<view wx:if="{{user}}" class="container"><scene-switch/>
   <view wx:if="{{error}}" class="sub">{{error}}</view>
   <view class="label">MEMORY PARTNER</view><view class="title">{{user.nickname}}</view>
   <view class="card"><view class="sub">{{user.posts}} 只漂流瓶 · {{user.followers}} 个关注</view>

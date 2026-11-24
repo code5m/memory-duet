@@ -20,6 +20,8 @@ jobs:
         run: |
           node --check web/app.js
           node --check web/social.js
+          node --check web/scene.js
+          find miniapp -name '*.js' -print0 | xargs -0 -n1 node --check
           node --check web/data/catalog.js
           node --check web/data/expansion.js
           node --check miniapp/pages/social/index.js
@@ -30,6 +32,7 @@ jobs:
         run: |
           node tests/catalog.test.js
           node tests/extended_catalog.test.js
+          node tests/scene.test.js
       - name: Guest community HTTP integration tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
 

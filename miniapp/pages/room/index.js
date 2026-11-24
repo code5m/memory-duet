@@ -1,8 +1,9 @@
+const S=require('../../utils/scene.js');
 const api=require('../../utils/community.js');
 Page({
   data:{room:null,guest:null,error:'',answer:'',hintUsed:false,joined:false},
   onLoad(o){this.id=o.id||'';this.load();},
-  onShow(){this.load();},
+  onShow(){S.socialPage();this.load();},
   async load(){
     if(!this.id)return;
     try{const [r,u]=await Promise.all([api.call('/rooms/'+encodeURIComponent(this.id)),api.call('/me')]);

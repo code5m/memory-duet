@@ -1,4 +1,4 @@
-<view class="container">
+<view class="container"><scene-switch/>
   <view class="label">ACTIVE RECALL · LEARN TOGETHER</view>
   <view class="title">记忆共学练习室</view>
   <view class="sub">最多 8 人一起参加同一道回忆题；独立答对与提示后答对分开记录。</view>

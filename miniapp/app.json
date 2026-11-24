@@ -8,7 +8,9 @@
     "pages/partner/index",
     "pages/rooms/index",
     "pages/room/index",
-    "pages/profile/index"
+    "pages/profile/index",
+    "pages/review/index",
+    "pages/create/index"
   ],
   "window": {
     "navigationBarTitleText": "记忆搭子",
@@ -29,6 +31,10 @@
         "text": "分类"
       },
       {
+        "pagePath": "pages/review/index",
+        "text": "复习"
+      },
+      {
         "pagePath": "pages/social/index",
         "text": "交友"
       },
@@ -36,7 +42,11 @@
         "pagePath": "pages/profile/index",
         "text": "我的"
       }
-    ]
+    ],
+    "custom": true
   },
-  "style": "v2"
+  "style": "v2",
+  "usingComponents": {
+    "scene-switch": "/components/scene-switch/index"
+  }
 }

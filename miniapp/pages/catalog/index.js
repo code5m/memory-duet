@@ -1,16 +1,16 @@
-const C=require('../../data/catalog.js');require('../../data/expansion.js')(C);
+const L=require('../../utils/learning.js'),S=require('../../utils/scene.js'),C=L.C;
 Page({
   data:{dimensions:C.DIMENSIONS,index:0,values:['全部'],valueIndex:0,lessons:[],filters:[],count:0,topicId:'',sort:'curated'},
-  onShow(){const topicId=wx.getStorageSync('duetTopicFilter')||'';wx.removeStorageSync('duetTopicFilter');if(topicId){this.facets={topic:[C.topicsById[topicId]?.title].filter(Boolean)};this.setData({topicId});}
+  onShow(){S.learnPage();S.take('catalog');S.sync(this);const topicId=wx.getStorageSync('duetTopicFilter')||'';wx.removeStorageSync('duetTopicFilter');if(topicId){this.facets={topic:[C.topicsById[topicId]?.title].filter(Boolean)};this.setData({topicId});}
     this.refresh();},
   refresh(){
     if(!this.facets)this.facets={};
     const key=C.DIMENSIONS[this.data.index].key;
     const attempts=wx.getStorageSync('duetMiniAttempts')||{};
     const ctx={attempts,saved:{}};
-    const values=['全部'].concat(C.facetOptions(C.LESSONS,key,ctx));
+    const values=['全部'].concat(C.facetOptions(L.all(),key,ctx));
     const current=values[this.data.valueIndex]||'全部';
-    const lessons=C.filterLessonsMulti(C.LESSONS,{facets:this.facets,sort:this.data.sort},ctx);
+    const lessons=C.filterLessonsMulti(L.all(),{facets:this.facets,sort:this.data.sort},ctx);
     const filters=[];
     Object.keys(this.facets).forEach(k=>{
       const d=C.DIMENSIONS.find(x=>x.key===k);

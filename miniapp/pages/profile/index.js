@@ -1,1 +1,1 @@
-Page({data:{count:0,correct:0},onShow(){const all=wx.getStorageSync('duetMiniAttempts')||{};const rows=Object.values(all).flat();this.setData({count:rows.length,correct:rows.filter(x=>x.outcome==='independent-correct').length})}});
+const S=require('../../utils/scene.js');Page({data:{count:0,correct:0},onShow(){S.learnPage();S.take('profile');S.sync(this);const all=wx.getStorageSync('duetMiniAttempts')||{};const rows=Object.values(all).flat();this.setData({count:rows.length,correct:rows.filter(x=>x.outcome==='independent-correct').length})}});

@@ -1,4 +1,4 @@
-<view wx:if="{{room}}" class="container">
+<view wx:if="{{room}}" class="container"><scene-switch/>
   <view wx:if="{{error}}" class="sub">{{error}}</view>
   <view class="label">{{room.subject}} · GROUP ACTIVE RECALL</view>
   <view class="title">{{room.title}}</view>

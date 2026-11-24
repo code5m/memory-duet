@@ -1,7 +1,8 @@
+const S=require('../../utils/scene.js');
 const api=require('../../utils/community.js');
 Page({
   data:{rooms:[],guest:null,error:'',compose:false,title:'',question:'',hint:'',answer:'',subject:'记忆训练'},
-  onShow(){this.load();},
+  onShow(){S.socialPage();this.load();},
   async load(){
     try{const [rooms,who]=await Promise.all([api.call('/rooms'),api.call('/me')]);this.setData({rooms:rooms.items||[],guest:who.guest,error:''});}
     catch(e){this.setData({error:e.message});}

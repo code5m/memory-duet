@@ -1,0 +1,1 @@
+<view class="switch"><view class="option {{mode===item.id?'active':''}} {{mode==='social'?'sea':''}}" wx:for="{{modes}}" wx:key="id" data-mode="{{item.id}}" bindtap="change"><text>{{item.icon}}</text><text>{{item.label}}</text></view></view>

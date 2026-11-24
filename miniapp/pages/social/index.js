@@ -1,10 +1,29 @@
-const api=require('../../utils/community.js');
+const api=require('../../utils/community.js'),S=require('../../utils/scene.js');
 const SUBJECTS=['英语','语文','数学','科学','历史','地理','编程','专业知识','生活技能','记忆训练','其他学习'];
 Page({
-  data:{guest:null,connected:api.configured(),error:'',screen:'feed',kind:'all',feed:[],search:'',
+  data:{mode:'mixed',guest:null,connected:api.configured(),error:'',screen:'feed',kind:'all',feed:[],search:'',
     nickname:'',interests:'',postKind:'hard',title:'',content:'',subject:'英语',method:'',tags:'',subjects:SUBJECTS,
     photo:'',matches:[],challenges:[],leaders:[],inbox:[],loading:false},
-  onShow(){this.loadMe().then(()=>this.loadScreen());},
+  onShow(){
+    S.socialPage();this.setData({mode:S.get()});
+    const req=S.take('social');
+    this.loadMe().then(()=>{if(req)this.sceneRoute(req);else{S.sync(this);this.loadScreen();}});
+  },
+  sceneRoute(req){
+    const screen=req.section||'feed',draft=req.draft||null;
+    this.setData({mode:S.get()});
+    if(screen==='rooms'){wx.navigateTo({url:'/pages/rooms/index'});return;}
+    if(screen==='compose'){
+      this.setData({postKind:draft&&draft.kind||'hard',title:draft&&draft.title||'',content:draft&&draft.content||'',
+        subject:draft&&SUBJECTS.includes(draft.subject)?draft.subject:'其他学习',method:draft&&draft.method||'',tags:'',photo:''});
+    }
+    if(screen==='hard'||screen==='secret'){this.setData({kind:screen,screen:'feed'});this.loadScreen();S.sync(this);return;}
+    this.setData({screen:screen==='feed'?'feed':screen});
+    if(screen==='feed')this.setData({kind:'all'});
+    if(['compose','matches','inbox','saved','profile','challenges'].includes(screen)&&!this.requireGuest()){S.sync(this);return;}
+    if(screen==='profile'&&this.data.guest)this.setData({nickname:this.data.guest.nickname,interests:(this.data.guest.interests||[]).join(', ')});
+    this.loadScreen();S.sync(this);
+  },
   async loadMe(){
     if(!api.configured()){this.setData({connected:false,error:'请配置共享社区的 HTTPS 地址。学习功能仍可使用。'});return;}
     try{const r=await api.call('/me');this.setData({guest:r.guest||null,error:''});}
@@ -13,7 +32,7 @@ Page({
   async loadScreen(){
     if(!api.configured())return;
     const s=this.data.screen;
-    this.setData({loading:true,error:''});
+    S.sync(this);this.setData({loading:true,error:''});
     try{
       let r;
       if(s==='feed'||s==='saved'){
@@ -27,9 +46,9 @@ Page({
     }catch(e){this.setData({error:e.message});}
     finally{this.setData({loading:false});}
   },
-  requireGuest(){if(this.data.guest)return true;this.setData({screen:'guest'});wx.showToast({title:'随便起昵称即可进入',icon:'none'});return false;},
+  requireGuest(){if(this.data.guest)return true;this.resumeAfterGuest=this.data.screen==='guest'?'feed':this.data.screen;this.setData({screen:'guest'});wx.showToast({title:'随便起昵称即可进入',icon:'none'});return false;},
   switchScreen(e){const screen=e.currentTarget.dataset.screen;
-    if(screen==="rooms"){wx.navigateTo({url:"/pages/rooms/index"});return;}if(['compose','matches','challenges','inbox','saved'].includes(screen)&&!this.requireGuest())return;
+    if(screen==="rooms"){wx.navigateTo({url:"/pages/rooms/index"});return;}this.setData({screen});if(['compose','matches','challenges','inbox','saved','profile'].includes(screen)&&!this.requireGuest())return;
     this.setData({screen,nickname:screen==='profile'&&this.data.guest?this.data.guest.nickname:this.data.nickname,
       interests:screen==='profile'&&this.data.guest?this.data.guest.interests.join(', '):this.data.interests});this.loadScreen();},
   selectKind(e){this.setData({kind:e.currentTarget.dataset.kind,screen:'feed'});this.loadScreen();},
@@ -40,10 +59,10 @@ Page({
     const nick=(this.data.nickname||'').trim();
     if(!nick)return wx.showToast({title:'任意昵称不能为空',icon:'none'});
     try{const d=await api.call('/guest',{nickname:nick,interests:this.data.interests.split(/[,，、]/).map(x=>x.trim()).filter(Boolean).slice(0,8)});
-      api.saveGuest(d.token);this.setData({guest:d.guest,screen:'feed',error:''});this.loadScreen();}
+      api.saveGuest(d.token);this.setData({guest:d.guest,screen:this.resumeAfterGuest||'feed',error:''});this.resumeAfterGuest=null;this.loadScreen();}
     catch(err){this.setData({error:err.message});}
   },
-  newBottle(e){if(!this.requireGuest())return;this.setData({screen:'compose',postKind:e.currentTarget.dataset.kind||'hard'});},
+  newBottle(e){this.setData({screen:'compose',postKind:e.currentTarget.dataset.kind||'hard',title:'',content:'',method:'',tags:'',photo:''});if(!this.requireGuest())return;S.sync(this);},
   choosePhoto(){
     wx.chooseImage({count:1,sizeType:['compressed'],sourceType:['album','camera'],success:async r=>{
       const file=r.tempFilePaths[0];
